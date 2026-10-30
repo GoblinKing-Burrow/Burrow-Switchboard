@@ -43,7 +43,7 @@ Starting a private conversation with each bot is useful for a direct-message tes
 
 ### Commands, mentions and replies
 
-Recipient selection recognizes Telegram `mention`, `text_mention` and addressed `bot_command` entities for connected bots. A reply targets a known connected bot only when no explicit bot target is present. A matching username mention is stripped from the selected bot's display text; empty remaining text is ignored. Telegram commands are routed as text, not executed as Switchboard configuration operations. Native slash-command controls currently exist on Discord only.
+Recipient selection recognizes Telegram `mention`, `text_mention` and addressed `bot_command` entities for connected bots. A reply targets a known connected bot only when no explicit bot target is present. Caption entities follow the same rules. A matching username mention is stripped from the selected bot's display text; empty remaining text is ignored for text-only messages, while an image without a caption remains a turn. Telegram commands are routed as text, not executed as Switchboard configuration operations. Native slash-command controls currently exist on Discord only.
 
 With privacy enabled, Telegram may deliver a group message to only one bot, and reply delivery may take precedence over an addressed command. Configure broad delivery for each participating bot before testing broadcast semantics. See [Telegram delivery rules](https://core.telegram.org/bots/faq#what-messages-will-my-bot-get).
 

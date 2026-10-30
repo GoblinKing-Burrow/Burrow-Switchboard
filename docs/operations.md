@@ -22,7 +22,7 @@ The Discord worker validates bot identity, connects to the outbound Gateway WebS
 
 Disabling polling/the gateway pauses both ingestion and reconciliation. Clearing the token additionally removes the secret. Existing Core turns are not canceled by those settings actions. Shutdown aborts network work and waits for the service loop/serialized queue to finish.
 
-State survives through host settings/secrets, but collections are bounded. The per-connection 200-record combined delivery limit can remove old Telegram records, including work still pending under enough traffic. Discord protects unresolved and unknown deliveries from eviction and reports `discord_backlog_full` when no completed non-unknown record can be removed; a 4,000,000-byte delivery-state ceiling also applies. Do not treat this initial implementation as an unbounded durable outbox or unlimited audit trail.
+State survives through host settings/secrets, but collections are bounded. The per-connection 200-record combined delivery limit can remove old Telegram records, including accepted work still pending under enough traffic; frozen uncertain submissions are protected from eviction. If every record is protected, Telegram reports `telegram_backlog_full` and stops ingesting until space is available. Discord protects unresolved and unknown deliveries from eviction and reports `discord_backlog_full` when no completed non-unknown record can be removed; a 4,000,000-byte delivery-state ceiling also applies. Do not treat this initial implementation as an unbounded durable outbox or unlimited audit trail.
 
 ## Group, channel and thread quick checks
 
@@ -41,13 +41,17 @@ For Discord, check each bot's Message Content intent, View Channels, Send Messag
 | `telegram_auth_failed` | Verify bot token validity privately; 401/403 are mapped to this code |
 | `telegram_rate_limited` | Telegram returned 429; reduce traffic and allow recovery; current code retries at its fixed delay, not a parsed Retry-After value |
 | `telegram_request_failed` / `telegram_response_invalid` | Check outbound connectivity and Telegram availability; never include token-bearing request URLs in diagnostics |
+| `telegram_image_unsupported` | Send a PNG, JPEG, GIF or WebP photo/document with a recognized signature; document MIME must match the image bytes. No text-only turn was submitted |
+| `telegram_image_too_large` | Telegram image exceeded the hosted Bot API 20 MiB download limit; send a smaller image. No text-only turn was submitted |
+| `telegram_image_download_failed` | Check Telegram connectivity/file availability; send a fresh image after fixing it. Failure details and token-bearing URLs are deliberately redacted |
+| `telegram_backlog_full` | All 200 records are protected uncertain submissions; inspect Core and resolve the backlog before ingesting more work |
 | `discord_gateway_intents_disallowed` / `discord_gateway_auth_failed` | Enable Message Content in the Discord application or check token; inspect connection health after reconnect |
 | `discord_token_missing` / `discord_auth_failed` / `discord_token_validation_failed` | Check the selected bot's write-only credential privately |
 | `discord_rate_limited` / `discord_gateway_unavailable` / `discord_request_failed` | Check outbound network/Discord availability and allow retry/reconnect; do not expose credentials |
 | `discord_backlog_full` | Review unresolved/unknown deliveries and Core progress; no automatic reset/replay operation is provided. Do not clear state or resubmit work blindly |
 | Discord command says upgrade or fails | Verify the command-specific Core APIs, not just the submit/read indicator; see [Discord commands](discord.md#native-slash-commands) |
 | Inbound `processing` persists | Inspect the corresponding agent/Core turn; a read failure is retried by later reconciliation without a new per-delivery diagnostic |
-| Inbound `failed` / `interrupted` | Investigate Core execution rather than assuming the provider transport is responsible |
+| Inbound `failed` / `interrupted` | Inspect the redacted delivery `error` in the mod-local bootstrap/configuration response: an image error above indicates no Core submission; otherwise investigate the Core turn or mapping change |
 | Inbound `succeeded`, no message | Check for empty answer or an outbound `unknown`; success is not proof of delivery |
 | Outbound `unknown` | Inspect chat for complete/partial delivery; do not blindly resubmit work |
 | Denied chat returns | Expected: denial removes one request, not a permanent block |
@@ -58,3 +62,14 @@ For Discord, check each bot's Message Content intent, View Channels, Send Messag
 Include installed mod/Core versions, redacted transport health/error, relevant chat type and topic presence, approximate timestamps, delivery direction/status and Core turn ID if appropriate. Explain whether a fresh message was sent after approval. Remove token values, token-bearing URLs, personal chat content and unnecessary requester identifiers. There is no need to expose a private source repository in a public report.
 
 
+## Telegram images
+
+Use a compatible Core with external-turn attachments and choose a model that accepts image input. Telegram sends its ordinary photo variants or an image document; Switchboard selects a practical variant, checks downloaded byte signatures and applies a 20 MiB maximum. Image-only input is supported. The initial admission image is not replayed: send another after approval. Failed download, unsupported type or oversize produces a failed inbound delivery and **does not** submit the caption without its image; inspect the redacted `error` in the mod-local bootstrap/configuration response (the Settings list shows status). No provider URL, token or bytes are included in public diagnostics.
+
+Pending uncertain Core submissions temporarily retain their exact image bytes and caption in private mod settings for replay; after Core accepts, the frozen copy is cleared. Core retains accepted image artifacts under its own policies. Room context stores only caption/marker text, not images. Disabling a connection aborts an in-flight download; deleting/changing its mapping interrupts pending work but cannot recall an already accepted Core turn. Discord image input, generated images and outbound image replies remain unsupported.
+
+### Image/Core compatibility and interrupted inputs
+
+A first-attempt rejection known to occur before Core admission is terminal for that update: Diagnostics records a sanitized error and polling continues to later text instead of wedging the bot. `core_image_attachments_unavailable` means Core rejected an image input with its generic input-invalid code; upgrade Core first, but this code alone does not prove a missing feature. Other codes are `core_turn_input_invalid`, `core_image_attachment_too_large`, `core_agent_not_found`, and `core_agent_disabled`.
+
+A lost acceptance response is different: exact frozen input stays pending under the original key, including during temporary Core-capability outages. Disabling/removing or reassigning its mapping interrupts frozen work and clears its stored bytes, even if an older record mislabeled it terminal. This cannot recall a Core turn already accepted. No automatic new-key retry is used for uncertain acceptance.

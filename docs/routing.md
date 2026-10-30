@@ -8,18 +8,18 @@ Routing is scoped to a bot connection. Displayed room names are descriptive meta
 - **Discord DMs** retain per-DM admission. Guild access is authorized separately from observed-guild metadata. After an operator approves a server, visible channels and threads need no individual admission; Switchboard creates inherited routes as traffic or a supported command is observed. Channel and thread sessions/history remain isolated, and Discord permissions still determine what the bot can see and send.
 - Existing explicit Discord channel/thread mappings and legacy DM admissions remain supported. An explicit mapping, including a disabled one, takes precedence over inherited server access.
 
-A nonempty text message from an unknown Telegram DM/group or Discord DM/channel/thread can create or refresh a pending route entry when no inherited access applies. No Core turn is submitted. Pending admissions are bounded to 100 entries and are not a permanent request archive. Discord guild observation is separate: an observed but unauthorized guild appears as a pending server, not as proof that every channel is reachable.
+A nonempty text message or image from an unknown Telegram DM/group, or a nonempty text message from a Discord DM/channel/thread can create or refresh a pending route entry when no inherited access applies. No Core turn is submitted. Pending admissions are bounded to 100 entries and are not a permanent request archive. Discord guild observation is separate: an observed but unauthorized guild appears as a pending server, not as proof that every channel is reachable.
 
 **Approve** requires an existing enabled agent. An empty approval body (`{}`) uses the connection's assigned goblin; Telegram records this as inheritance, while a Discord legacy room approval remains an explicit room grant. Supplying `agentId` makes an explicit room choice. If the connection has no assignment, `{}` cannot approve a route. The triggering message is not replayed, so send a new message after approval.
 
-**Deny** removes the current request. It is **not a permanent ban**; later text from an unknown route can create another request.
+**Deny** removes the current request. It is **not a permanent ban**; later eligible input from an unknown route can create another request.
 
 ## Approved routing rules
 
-| Route | Text forwarded |
+| Route | Input forwarded |
 | --- | --- |
-| Telegram direct chat | Every approved nonempty `message.text`; group recipient selection does not apply |
-| Telegram approved group root or inherited forum topic | Human text with no known managed-bot target goes to every admitted managed bot that received it; known bot targets select only those bots |
+| Telegram direct chat | Every approved nonempty text message or photo/image-document (with or without caption); group recipient selection does not apply |
+| Telegram approved group root or inherited forum topic | Human text or image with no known managed-bot target goes to every admitted managed bot that received it; known bot targets select only those bots |
 | Discord DM | Every approved nonempty human text message |
 | Discord authorized-server channel/thread or explicit guild mapping | Human text mentioning that bot or replying to its message |
 | Disabled explicit mapping | Nothing; it does not fall through to inherited access or return to pending admissions |
@@ -34,9 +34,9 @@ For approved non-direct routes, Switchboard derives recipients from valid Telegr
 4. With no known bot target, ordinary human group speech goes to all admitted managed bots that receive it.
 5. Bot-authored messages never start agent turns (Telegram messages carrying `sender_chat` represent a speaking chat instead of the synthetic bot sender). On an approved room they are context only, preventing bot-to-bot wake loops.
 
-A selected bot's first matching username `mention` (not `text_mention` or command) is removed from its submitted display text; the remainder must be nonempty. Telegram entities use UTF-16 offsets. A visually similar `@name` without a matching entity does not select a bot. Telegram's delivery/privacy rules are a prerequisite: Switchboard cannot route an update Telegram never delivered. See [Telegram setup](setup.md#privacy-mode-and-administrator-rights).
+A selected bot's first matching username `mention` (not `text_mention` or command) is removed from its submitted display text; the remainder must be nonempty for a text-only request. For an image, an empty caption is represented as `[Image attached]`. Caption entities use the same selection rules and UTF-16 offsets as text entities. A visually similar `@name` without a matching entity does not select a bot. Telegram's delivery/privacy rules are a prerequisite: Switchboard cannot route an update Telegram never delivered. See [Telegram setup](setup.md#privacy-mode-and-administrator-rights).
 
-For Telegram, only `update.message` with nonempty text is processed. Media, attachment-only messages, captions without text, edited-message updates and channel-post updates are not supported. A targeted command is not a Switchboard configuration command, though after approval its addressed text can be routed like other bot-targeted text.
+For Telegram, `update.message` supports text, photos and image documents. The highest-resolution photo within the hosted Bot API 20 MiB download limit is selected; a smaller advertised variant may be used if the highest exceeds that limit. Documents must be PNG, JPEG, GIF or WebP; images are identified by downloaded bytes, and an explicit document MIME must match. Captions and `caption_entities` participate in recipient selection; an image without a caption is a valid turn. Download occurs only after admission, enabled mapping and recipient checks. Unsupported documents, unrecognized/mismatched image signatures, oversized files and failed downloads are recorded as failed deliveries rather than forwarding a caption without the image. Each delivered Telegram update is a separate turn (including album items). Other media, edited-message updates and channel-post updates are not supported. A targeted command is not a Switchboard configuration command, though after approval its addressed text can be routed like other bot-targeted text.
 
 Discord handles `MESSAGE_CREATE` text via Gateway. Bot/webhook senders cannot create admissions or trigger turns; on approved guild routes their text may contribute context. Human guild text without a mention/reply is context only. Attachments and attachment-only messages do not become turns. Native Discord slash commands are documented separately in [Discord setup](discord.md#native-slash-commands).
 
@@ -56,13 +56,13 @@ Deleting a Telegram root mapping removes inherited access while retaining explic
 
 ## Limits and duplicate handling
 
-Per connection, there are at most 250 stored mappings, 100 pending admissions and 200 recent delivery records (inbound and outbound together). Discord stores at most 250 authorized servers and 250 observed guilds. Telegram delivery entries can evict older ones. Discord protects unresolved/unknown deliveries from eviction and reports `discord_backlog_full` if its 200-record ledger or 4,000,000-byte bound cannot admit work. These bounded settings collections are not an unlimited queue or audit ledger.
+Per connection, there are at most 250 stored mappings, 100 pending admissions and 200 recent delivery records (inbound and outbound together). Discord stores at most 250 authorized servers and 250 observed guilds. Telegram delivery entries can evict older entries except an unresolved frozen submission; if no entry can be removed, `telegram_backlog_full` stops ingestion until the backlog is resolved. Discord protects unresolved/unknown deliveries from eviction and reports `discord_backlog_full` if its 200-record ledger or 4,000,000-byte bound cannot admit work. These bounded settings collections are not an unlimited queue or audit ledger.
 
 The default connection preserves Core idempotency key `telegram-update-<update_id>`; new connections use `telegram-<connectionId>-update-<update_id>`. Discord uses `discord-<connectionId>-message-<messageId>`. Gateway resume/heartbeat, Telegram offsets and durable delivery state reduce duplicates but do not provide unconditional exactly-once messaging. See [operations](operations.md#delivery-states-and-uncertain-outcomes).
 
 ## Shared group and channel conversation context
 
-Enabled Telegram group routes in the **same chat and topic** share a bounded conversation record across managed bot connections. Root authorization does not merge topic records. Switchboard records delivered human text before recipient selection, records bot-authored messages as passive context, and adds successfully posted agent reply chunks with bot, connection and agent attribution.
+Enabled Telegram group routes in the **same chat and topic** share a bounded conversation record across managed bot connections. Root authorization does not merge topic records. Switchboard records delivered human text or image captions (or a descriptive marker when captionless) before recipient selection, records bot-authored messages as passive context, and adds successfully posted agent reply chunks with bot, connection and agent attribution.
 
 **Visibility is not a trigger.** Telegram's known-target rules above decide recipients; bot messages remain context only. Discord turns still require a human mention/reply to that bot. Two bots selected simultaneously can answer concurrently, and neither is promised visibility of an answer not yet posted when its turn was submitted. Wait for one answer before asking another to react.
 
@@ -74,5 +74,4 @@ Only approved, enabled routes contribute inbound history. Disabling/deleting acc
 
 Discord independently persists bounded history per guild+channel across approved bots; a thread ID is its own room. DMs are connection-isolated. On authorized or explicitly approved guild routes, human text and observed bot/webhook text can be context while only a human mention/reply starts a turn. Discord uses the same 100-room, 50-message, 4,000-UTF-16-unit, 512,000-byte total and 16,000-byte submission-context limits.
 
-The complete submission is frozen before Core submission so an uncertain submission can replay the same input after restart even if room history changes. These pending inputs are internal state and omitted from public delivery diagnostics. The 200-record connection limit still bounds recovery.
-
+Only text/markers are shared in room history, not image bytes or file URLs. The complete submission, including the downloaded image bytes and caption, is frozen in private settings before Core submission so an uncertain submission can replay the same input after restart even if room history changes. These pending inputs are internal state and omitted from public delivery diagnostics. The 200-record connection limit still bounds recovery.

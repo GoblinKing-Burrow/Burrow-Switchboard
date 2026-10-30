@@ -6,6 +6,11 @@ const MAX_MESSAGES = 50;
 const MAX_TEXT = 4000;
 const MAX_BYTES = 512_000;
 const MAX_CONTEXT = 16_000;
+// Context stores descriptive text only, never image bytes or Telegram file URLs.
+function visibleText(message) {
+  const text = typeof message?.text === 'string' ? message.text : typeof message?.caption === 'string' ? message.caption : '';
+  return text.trim() ? text : (message?.photo?.length ? '[Image attached]' : message?.document ? '[Document attached]' : '');
+}
 function boundedText(text, limit = MAX_TEXT) {
   const value = text.slice(0, limit);
   const last = value.charCodeAt(value.length - 1);
@@ -24,7 +29,7 @@ export function telegramSpeaker(sender = {}) {
 export function quotedReply(message) {
   const reply = message.reply_to_message;
   if (!reply) return null;
-  const text = reply.text || reply.caption || message.quote?.text;
+  const text = reply.text || reply.caption || message.quote?.text || visibleText(reply);
   if (typeof text !== 'string' || !text.trim()) return null;
   return { messageId: reply.message_id ?? null, speaker: telegramSpeaker(reply.sender_chat || reply.from), text: boundedText(text), ...(message.quote?.text ? { quotedExcerpt: boundedText(message.quote.text) } : {}) };
 }
@@ -38,14 +43,15 @@ export function createRoomHistory({ settings, clock = Date.now }) {
   async function rooms() { return await settings.get(KEY, []); }
   return Object.freeze({
     record: (mapping, message, speaker) => serialize(async () => {
-      if (!isRoom(mapping) || !Number.isSafeInteger(message.message_id) || typeof message.text !== 'string' || !message.text.trim()) return;
+      const text = visibleText(message);
+      if (!isRoom(mapping) || !Number.isSafeInteger(message.message_id) || !text.trim()) return;
       const key = roomKey(mapping.chatId, mapping.topicId);
       const list = await rooms();
       let room = list.find(item => item.key === key);
       if (!room) { room = { key, messages: [] }; list.push(room); }
       // Telegram message IDs, unlike update IDs, are shared by all bots in a room.
       if (room.messages.some(item => item.messageId === message.message_id)) return;
-      room.messages.push({ messageId: message.message_id, at: message.date ? new Date(message.date * 1000).toISOString() : new Date(clock()).toISOString(), speaker, text: boundedText(message.text), ...(message.reply_to_message?.message_id != null ? { replyToMessageId: message.reply_to_message.message_id } : {}) });
+      room.messages.push({ messageId: message.message_id, at: message.date ? new Date(message.date * 1000).toISOString() : new Date(clock()).toISOString(), speaker, text: boundedText(text), ...(message.reply_to_message?.message_id != null ? { replyToMessageId: message.reply_to_message.message_id } : {}) });
       room.messages.sort((a, b) => a.messageId - b.messageId);
       room.messages = room.messages.slice(-MAX_MESSAGES);
       // Recency is ingestion order across rooms, Telegram order within a room.
