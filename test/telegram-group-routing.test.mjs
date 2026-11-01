@@ -270,3 +270,29 @@ test('operator API assigns Discord connection defaults and authorizes only obser
   assert.deepEqual(removed.body.connections.find(item => item.id === connection.id).servers, []);
   assert.doesNotMatch(JSON.stringify(removed), /discord-secret/);
 });
+
+test('mapping edits preserve assignment when omitted and null restores the connection default', async t => {
+  const f = fixture(); t.after(() => f.service.close());
+  const ids = await twoBots(f); const id = ids[1];
+  await admit(f, id, BOTS[1]);
+  const route = () => f.settings.get(key(id, 'mappings'))[0];
+  const edit = body => f.service.updateConnectionMapping(id, route().id, body);
+  await edit({ enabled: false });
+  assert.equal(route().agentId, 'smatchet'); assert.equal(route().inheritedAgent, true);
+  await edit({ enabled: true, agentId: 'hatchet' });
+  await edit({ enabled: false });
+  assert.equal(route().agentId, 'hatchet'); assert.equal(route().inheritedAgent, false);
+  await edit({ enabled: true, agentId: null });
+  assert.equal(route().agentId, 'smatchet'); assert.equal(route().inheritedAgent, true);
+  for (const body of [{ agentId: null }, { enabled: 'true' }, { enabled: true, agentId: 'off' }, { enabled: true, agentId: 'missing' }]) {
+    const before = structuredClone([...f.settings]);
+    await assert.rejects(edit(body)); assert.deepEqual([...f.settings], before);
+  }
+  await f.service.configureConnection(id, { enabled: false, agentId: null });
+  await edit({ enabled: false });
+  assert.equal(route().agentId, null); assert.equal(route().inheritedAgent, true);
+  const before = structuredClone([...f.settings]);
+  await assert.rejects(edit({ enabled: true, agentId: null }), /mapping_invalid/);
+  assert.deepEqual([...f.settings], before);
+  assert.equal((await f.service.publicState()).connections[0].mappings.length, 0);
+});

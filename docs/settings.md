@@ -1,50 +1,55 @@
 # Settings reference
 
-Switchboard registers two Settings sections under manifest ID `burrow-switchboard`:
+Switchboard contributes **Bots** and **Diagnostics** under **Settings → Switchboard**. Older `configuration`, `pending-admissions`, and `chat-mappings` links open Bots; `status` opens Diagnostics.
 
-| Section | Purpose |
-| --- | --- |
-| **Bots** (`bots`) | Add/select connections, assign a default goblin, configure credentials and transport state, approve Telegram chat access or Discord servers, handle pending admissions, and manage room overrides |
-| **Diagnostics** (`diagnostics`) | Inspect bot identity, transport/Core health, mappings, pending admissions and recent deliveries |
+## Everyday use
 
-Older links to `configuration`, `pending-admissions`, and `chat-mappings` are still accepted by the UI and open **Bots**; an older `status` link opens **Diagnostics**. These are compatibility aliases, not separate current navigation sections.
+**Bots** follows Burrow’s Connections → MCP servers inventory/editor pattern:
 
-## Bots
+- The **primary work surface** starts with an Add bot form. Select a saved bot in the **supporting inventory** to open its complete editor directly—no second Edit click.
+- Bot name, default responder, Receive messages and token replacement form one explicit **Save bot** scope. Saved credentials stay undisplayed; replacement is disclosed only when needed.
+- The same primary surface shows pending requests and allowed chats/servers for the selected bot. **Pause / Resume**, **Allow**, **Dismiss** and **Revoke** are immediate operations; they do not save other bot edits.
+- **Change** opens a chat’s responder editor in primary. Selecting a goblin saves immediately, with Saving/Saved/error feedback. Failed choices remain editable and expose **Retry saving**; there is no normal Save chat button.
+- The supporting surface contains only compact selectors, connection/responder/request summaries and immediate Refresh/Add actions—no editable settings. With no supporting target, the same inventory appears once in a Saved bots disclosure below the primary editor.
 
-The **Bot connection** selector displays the provider and persists while moving between sections. All access, mappings and diagnostics belong to the selected connection.
+All controls, section headings/dividers, compact inventories, confirmations and navigation protection use the shared Burrow Settings host. The mod injects no stylesheet or private dialog system. This UI requires the host methods `confirm`, `navigate` and `setDraft`; install the matching Burrow UI support together with Switchboard. An older host shows an explicit compatibility message instead of an unguarded editor. Existing bot operation is unchanged by that message.
 
-- **Add bot connection:** choose Telegram or Discord, enter a name (up to 80 characters), token, optional **Assigned goblin**, and enable toggle. Saving validates provider identity. Transport is immutable and one provider bot can belong to only one connection.
-- **Assigned goblin:** nullable connection default. New connections may be unassigned. Saving an explicit selection changes inherited Telegram approvals and Discord server routes; selecting the blank option clears the assignment. API clients that omit `agentId` preserve the existing value.
-- **Connection name:** rename without changing routing or history.
-- **Enable Telegram polling / Discord gateway:** affects only this bot. Disabling pauses ingestion and reply reconciliation; other connections continue.
-- **Bot token:** write-only. Blank preserves the saved secret. Rotation is allowed only for the same provider bot; add a connection for a different bot.
-- **Clear configured token:** confirmation-protected; removes this credential and disables transport while preserving assignment, binding, cursor where applicable, access, mappings and deliveries.
-- **Remove connection:** confirmation-protected; stops the worker and deletes its credential and connection-scoped Switchboard state. It does not delete Core conversations or cancel already submitted Core turns. Mod-wide shared room history is also retained within its normal bounds.
+### Bot setup and save scope
 
-Existing installations appear as the Telegram `default` connection, preserving credential, routes, offset/history and Core session identity without copying secrets.
+Choose Telegram or Discord, a friendly bot name, a bot token, and **Who answers new chats**, then **Connect bot**. Setup links point to Telegram’s BotFather or Discord’s Developer Portal. A new bot starts receiving messages unless **Receive messages** is turned off. Provider validation establishes the bot identity; a provider bot may belong to only one connection.
 
-### Chat and server access
+- **Who answers new chats** is the bot default. Chats using that default follow later changes; custom assignments remain unchanged. **Choose when approving a chat** clears the default. Already-approved default-following chats without a responder cannot deliver until a default or custom responder is set.
+- **Receive messages** pauses ingestion and reply reconciliation without deleting credentials or access. It does not cancel Core turns already submitted. It belongs to the complete bot configuration Save scope, not an independent chat operation.
+- A blank replacement token keeps the saved credential. The saved value is never returned or displayed. Use Add bot to connect a different provider bot.
+- Unchanged responder IDs are omitted on save, allowing an unavailable bot’s connection to be paused without revalidating that unchanged assignment. Paused tokenless bots can still be edited.
+- **Remove bot or clear token** exposes separate confirmed destructive actions. Clearing retains access, assignments and records; removing deletes that bot’s Switchboard configuration, not provider chats or Core conversations. Other bots are unaffected.
 
-An assigned goblin is required before approving inherited access.
+Only one editor/save scope is active. Dirty values are recognized against an accepted baseline; reverting clears dirty state and unchanged/in-flight submissions do not write again. Request/validation failures preserve the draft and secret input. Secrets remain in component memory only, never client storage.
 
-- **Telegram:** a pending group/topic request is represented as the root group. Approving it grants that bot connection access to the root and all forum topics; topics retain isolated sessions/history. Direct chats remain individually admitted. Approval with **Use assigned goblin** inherits later assignment changes.
-- **Discord:** once the gateway has observed a guild, it appears under **Server access**. **Approve server** grants inherited access to visible channels and threads without per-channel admission; **Pause server** stops inherited routes but retains the authorization record; **Revoke** removes it. Discord permissions, channel overwrites and private-thread membership still apply.
-- **Pending admissions:** approve a direct/legacy room request with the assigned goblin or choose an explicit agent, or deny the current request. Denial is not permanent.
-- **Room overrides:** inspect mappings and explicitly choose agent/enabled state. Explicit Telegram topic or Discord channel/thread mappings take precedence over group/server inheritance, including when disabled. Deleting only a generated mapping is not a revocation of its parent grant; remove or pause the parent chat/server access to stop inheritance. Removing a Telegram topic override exposes a still-approved root mapping.
+Switching bot, chat, subsection, category or application page uses Burrow’s shared **Save / Discard / Stay** guard. Failed Save stays in the current editor; busy operations block navigation. Reload/close uses the host’s native browser leave warning for dirty or busy state. Destructive actions first resolve an unsaved editor through this same guard, then use Burrow’s normal confirmation dialog with current saved names and IDs.
 
-Polling/gateway timeouts, retry intervals, provider endpoints, limits and chunk sizes are implementation constants, not operator settings.
+### Telegram chats and topics
 
-## Diagnostics
+A direct message requests access individually. A group/topic request represents its **root group**; allowing the group includes its forum topics, with separate topic sessions and history. Send a fresh message after approval; the requesting message is not replayed.
 
-Diagnostics displays transport health, polling/gateway activity, bot identity, Core capability, approved mappings, pending admissions and recent deliveries for the selected bot. Discord server authorization itself is managed on **Bots**.
+Choose **<goblin> · bot default** to follow the saved default, or an explicit enabled goblin for a chat-specific assignment. Missing defaults do not invalidate working custom assignments. **Topic exceptions** take priority over the root group, including when paused. Removing an exception reveals still-allowed parent access; pause to block a topic instead. Removing a root group does not remove explicit topic exceptions. Telegram privacy mode and permissions still determine which updates reach the bot; see [setup](setup.md).
 
-Bot identity is populated after successful Telegram `getMe` or Discord `/users/@me` validation. Core availability checks only for the external-turn methods; it does not prove a configured agent will answer or that provider delivery works.
+### Discord servers, channels and direct messages
 
-The UI loads on mount and after mutations and has **no periodic auto-refresh**. Revisit the section/page for a newer snapshot. A load failure offers Retry; leaving the section aborts its pending request and disposes the mounted UI.
+Observed servers appear under **Servers** after invitation. Allow/Resume requires an enabled default responder and permits visible channels and threads. Pause retains the grant; Revoke removes inherited access. Provider permissions and private-thread membership still apply.
 
-Repository fake-DOM/frontend fixtures verify rendering and request wiring only. They are **not** evidence of a live browser session, provider credential, Discord guild observation, Telegram privacy configuration, network reachability or end-to-end delivery.
+Direct messages are approved individually and never require a server grant. Channel/thread exceptions retain the distinction between **who answers** and **where the bot is allowed**. Generated rooms remain dependent on their server grant even after choosing a custom responder. Independently approved legacy rooms remain independent. Restoring the bot-default responder does not expand access, and server pause/revoke still fences generated routes and outstanding replies.
 
-## Access control
+### Refresh and lifecycle
 
-The mod API rejects unauthenticated requests when the host reports authentication enabled. When host authentication is disabled, the mod does not independently require a login. Protect the Burrow operator interface using the host's controls; write-only tokens do not make an exposed settings endpoint safe.
+Refresh fetches current state without saving drafts. Idle visible pages also check every 10 seconds; focused controls, failed/dirty edits, dialogs and busy operations are not replaced by automatic checks. Unchanged polls preserve live draft/control identity. Delayed manual refresh success/failure does not detach a control focused while the request was in flight. Untouched bot fields rebase to refreshed accepted values so a name-only save does not undo an external pause.
 
+Failed refreshes retain usable data and expose an error. Older reads cannot overwrite newer writes. Removed bots/chats orphan their drafts rather than rebinding to another item with a shared mapping ID. Leaving aborts requests, cancels polling and clears the host registration. Browser cancellation is not proof of server-side rollback; revisit to reconcile uncertain requests.
+
+## Diagnostics and boundaries
+
+Diagnostics retains scoped transport health/activity, bot identity, Core-turn availability, approved mappings, pending admissions and recent deliveries. It uses compact shared facts/list styling, not metric cards. The supporting bot selector scopes the diagnostic view.
+
+Connected describes the transport snapshot, not proof of model execution or end-to-end delivery. Fake-DOM tests verify event wiring and lifecycle; real-browser acceptance uses production host assets and synthetic APIs, not real messaging services. See [acceptance](settings-acceptance.md).
+
+Host authentication policy is preserved, including intentional authentication-disabled configurations. Protect the operator interface with the host’s controls; write-only tokens do not make an exposed settings endpoint safe.

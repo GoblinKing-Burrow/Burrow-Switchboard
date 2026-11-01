@@ -41,7 +41,7 @@ For Discord, check each bot's Message Content intent, View Channels, Send Messag
 | `telegram_auth_failed` | Verify bot token validity privately; 401/403 are mapped to this code |
 | `telegram_rate_limited` | Telegram returned 429; reduce traffic and allow recovery; current code retries at its fixed delay, not a parsed Retry-After value |
 | `telegram_request_failed` / `telegram_response_invalid` | Check outbound connectivity and Telegram availability; never include token-bearing request URLs in diagnostics |
-| `telegram_image_unsupported` | Send a PNG, JPEG, GIF or WebP photo/document with a recognized signature; document MIME must match the image bytes. No text-only turn was submitted |
+| `telegram_image_unsupported` | Send a PNG, JPEG, GIF or WebP photo/document with a recognized signature; a declared image MIME must match the image bytes. A missing MIME or `application/octet-stream` falls back to signature detection. No text-only turn was submitted |
 | `telegram_image_too_large` | Telegram image exceeded the hosted Bot API 20 MiB download limit; send a smaller image. No text-only turn was submitted |
 | `telegram_image_download_failed` | Check Telegram connectivity/file availability; send a fresh image after fixing it. Failure details and token-bearing URLs are deliberately redacted |
 | `telegram_backlog_full` | All 200 records are protected uncertain submissions; inspect Core and resolve the backlog before ingesting more work |
@@ -55,7 +55,7 @@ For Discord, check each bot's Message Content intent, View Channels, Send Messag
 | Inbound `succeeded`, no message | Check for empty answer or an outbound `unknown`; success is not proof of delivery |
 | Outbound `unknown` | Inspect chat for complete/partial delivery; do not blindly resubmit work |
 | Denied chat returns | Expected: denial removes one request, not a permanent block |
-| Disabled chat never becomes pending | Expected: its saved mapping still exists; use Bots → Room overrides to re-enable |
+| Disabled chat never becomes pending | Expected: its saved mapping still exists; use the selected bot's chat **Resume** action (or its collapsed exceptions) to re-enable |
 
 ## A useful support report
 
@@ -70,6 +70,7 @@ Pending uncertain Core submissions temporarily retain their exact image bytes an
 
 ### Image/Core compatibility and interrupted inputs
 
-A first-attempt rejection known to occur before Core admission is terminal for that update: Diagnostics records a sanitized error and polling continues to later text instead of wedging the bot. `core_image_attachments_unavailable` means Core rejected an image input with its generic input-invalid code; upgrade Core first, but this code alone does not prove a missing feature. Other codes are `core_turn_input_invalid`, `core_image_attachment_too_large`, `core_agent_not_found`, and `core_agent_disabled`.
+A first-attempt rejection known to occur before Core admission is terminal for that update: The delivery record contains a sanitized error (available in the mod-local bootstrap/configuration response), and polling continues to later text instead of wedging the bot. `core_image_attachments_unavailable` means Core rejected an image input with its generic input-invalid code; upgrade Core first, but this code alone does not prove a missing feature. Other codes are `core_turn_input_invalid`, `core_image_attachment_too_large`, `core_agent_not_found`, and `core_agent_disabled`.
 
 A lost acceptance response is different: exact frozen input stays pending under the original key, including during temporary Core-capability outages. Disabling/removing or reassigning its mapping interrupts frozen work and clears its stored bytes, even if an older record mislabeled it terminal. This cannot recall a Core turn already accepted. No automatic new-key retry is used for uncertain acceptance.
+

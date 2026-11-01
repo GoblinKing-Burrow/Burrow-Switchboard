@@ -11,9 +11,9 @@ Keep the token secret. Do not paste it into chat, screenshots, logs, shell comma
 ## First direct-chat route
 
 1. Create the bot through BotFather, install Switchboard, and open **Settings → Switchboard → Bots**.
-2. Add/select the Telegram connection, enter its write-only token, assign its goblin and enable polling.
-3. Check the connection's bot identity and transport status. **Diagnostics** contains detailed delivery state; revisit for a fresh snapshot.
-4. Send nonempty text in a private chat. Under the same bot's pending access on **Bots**, approve using its assigned goblin (or choose an explicit room override).
+2. Choose **Add bot → Telegram**, enter a name and token, choose who answers new chats, and leave **Receive messages** on. Select an existing bot card to manage it.
+3. Check that the selected bot shows **Connected** and the intended responder. **Diagnostics** contains detailed delivery state; **Refresh** requests a new snapshot.
+4. Send nonempty text in a private chat. Under the same bot's **Waiting for approval**, choose who answers and **Allow chat**.
 5. Send a fresh message; the admission message is not replayed. Verify the reply and delivery state.
 
 ## Groups and forum topics
@@ -53,15 +53,22 @@ Switchboard bridges its own confirmed bot replies into shared group/topic contex
 
 Telegram group instructions were rechecked **2026-10-25** against official documentation and Switchboard `d1388ca8c65e250411034de7560de59d3ffdc875` (**2026.10.24.3**). This checks documented delivery rules and source behavior, not live credentials or end-to-end delivery.
 
+## Send an image
+
+On an approved route, send a photo or a PNG/JPEG/GIF/WebP image document up to 20 MiB, with or without a caption. Use the same group mention/reply rules to choose recipients; an untargeted group image can reach every admitted bot that receives it. Each album item is handled as a separate update/turn. The original admission image is not replayed after approval.
+
+Install a Switchboard build containing inbound-image support and a Core build that accepts external-turn attachments, with an image-capable selected model. The submit/read availability indicator only checks the underlying turn APIs. See [image troubleshooting](operations.md#telegram-images) for download errors, compatibility failures and uncertain submissions. Discord attachments and outbound image replies remain unsupported.
+
 ## Safe first test
 
 Use an agent with limited capabilities and a harmless prompt such as “Reply with a short greeting.” Verify the chosen agent, chat and topic before testing anything that could change files or external state. For repository test prerequisites and network-safety qualifications, see [development](development.md).
 
 ## Pause or remove the token
 
-Uncheck polling and save to pause ingestion **and reply reconciliation** while retaining the token and records. To remove the stored token, use **Clear configured token** and confirm. Clearing also disables polling, but does not delete mappings or delivery state. Neither action is a documented cancellation of Core turns already submitted.
+Select the bot in the supporting inventory, turn off **Receive messages**, and **Save bot** to pause ingestion **and reply reconciliation** while retaining the token and records. To remove the stored token, expand **Remove bot or clear token**, use **Clear saved token**, and confirm. Clearing also disables polling, but does not delete mappings or delivery state. Neither action is a documented cancellation of Core turns already submitted.
 
 ## Add more bots
 
-Repeat **Bots → Add bot connection** for each BotFather bot. Each has its own credential, poll cursor, admissions, mappings, delivery records and Core sessions. Select the intended bot before approving its pending chat. The same Telegram chat/topic can route independently through different bots with distinct Core sessions and idempotency keys, while approved group/topic connections share bounded room context. Removing or pausing one connection does not stop the others.
+Repeat **Bots → Add bot** for each BotFather bot. Each has its own credential, poll cursor, admissions, mappings, delivery records and Core sessions. Select the intended bot before approving its pending chat. The same Telegram chat/topic can route independently through different bots with distinct Core sessions and idempotency keys, while approved group/topic connections share bounded room context. Removing or pausing one connection does not stop the others.
+
 

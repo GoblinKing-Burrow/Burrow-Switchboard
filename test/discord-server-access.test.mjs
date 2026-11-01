@@ -190,7 +190,8 @@ test('inherited agent reassignment interrupts old work and resets bindings while
   assert.equal(state.mappings.find(route => route.id === inherited.id).agentId, 'hatchet');
   assert.equal(state.mappings.find(route => route.id === inherited.id).sessionId, null);
   assert.equal(state.mappings.find(route => route.id === thread.id).agentId, 'goblin');
-  assert.equal(state.mappings.find(route => route.id === thread.id).inherited, false);
+  assert.equal(state.mappings.find(route => route.id === thread.id).inherited, true);
+  assert.equal(state.mappings.find(route => route.id === thread.id).inheritedAgent, false);
   f.setTurn({ status: 'succeeded', result: { answerText: 'old reply' } });
   await f.service.reconcile(f.api);
   assert.equal(f.sent.length, 1); // Only the explicit thread keeps its pending delivery.
@@ -307,4 +308,31 @@ test('rejected server mutations leave an authorized in-flight reply untouched', 
   const state = await f.service.publicState();
   assert.equal(state.servers[0].enabled, true);
   assert.equal(state.deliveries.find(item => item.direction === 'inbound').status, 'delivered');
+});
+
+test('responder inheritance is independent of server authorization and legacy routes remain fenced', async t => {
+  const f = fixture(); t.after(() => f.service.close());
+  await enable(f);
+  const request = await explicit(f);
+  await f.service.updateMapping(request.id, { enabled: true, agentId: null });
+  await f.service.processMessage(message('1001'), BOT);
+  assert.equal(f.submissions.at(-1).agentId, 'goblin');
+  assert.equal(f.submissions.length, 1); // independent channel has no server grant
+  await enable(f, 'hatchet');
+  assert.equal((await f.service.publicState()).mappings[0].agentId, 'hatchet');
+  await f.service.deleteMapping(request.id);
+  await f.service.configureServer(GUILD, { enabled: true });
+  await f.service.processMessage(message('1002'), BOT);
+  let route = (await f.service.publicState()).mappings[0];
+  assert.equal(route.inherited, true); // legacy generated route follows default
+  await enable(f, 'goblin');
+  assert.equal((await f.service.publicState()).mappings[0].agentId, 'goblin');
+  await f.service.updateMapping(route.id, { enabled: true, agentId: 'hatchet' });
+  await enable(f, 'hatchet'); await enable(f, 'goblin');
+  route = (await f.service.publicState()).mappings[0];
+  assert.equal(route.agentId, 'hatchet'); assert.equal(route.inherited, true); assert.equal(route.inheritedAgent, false);
+  await f.service.configureServer(GUILD, { enabled: false });
+  const count = f.submissions.length;
+  await f.service.processMessage(message('1003'), BOT);
+  assert.equal(f.submissions.length, count);
 });

@@ -1,10 +1,7 @@
 export const settingsSections = Object.freeze([{ id: 'bots', label: 'Bots' }, { id: 'diagnostics', label: 'Diagnostics' }]);
 
 let selectedConnectionId = 'default';
-
-const styles = `
-.switchboard-settings{display:grid;gap:14px;min-width:0}.switchboard-settings h2,.switchboard-settings h3{margin:0}.switchboard-settings summary{cursor:pointer;padding:10px 0;font-weight:650}.switchboard-settings details[open]>summary{margin-bottom:10px}.switchboard-item-head>div{min-width:0;overflow-wrap:anywhere}.switchboard-settings button{flex-shrink:0}.switchboard-settings *{box-sizing:border-box}.switchboard-settings :is(input,select,button){font:inherit}.switchboard-settings :is(input:not([type=checkbox]),select){width:100%;min-height:34px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface-input);color:var(--text)}.switchboard-settings :is(input,select,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}.switchboard-fields{display:grid;gap:12px}.switchboard-field{display:grid;gap:5px;color:var(--text-strong);font-weight:650}.switchboard-field small{color:var(--muted);font-weight:400}.switchboard-toggle{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--text)}.switchboard-toggle input{flex:0 0 auto;margin-top:3px;accent-color:var(--accent)}.switchboard-toggle span{display:grid;gap:2px}.switchboard-toggle strong{color:var(--text-strong)}.switchboard-toggle small{color:var(--muted)}.switchboard-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft)}.switchboard-actions>div{display:flex;gap:8px}.switchboard-settings button{min-height:32px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text-strong);cursor:pointer}.switchboard-settings button:hover:not(:disabled){background:var(--surface-hover)}.switchboard-settings button.primary{border-color:var(--accent);background:var(--accent-subtle);color:var(--accent-strong)}.switchboard-settings button.danger{border-color:color-mix(in srgb,var(--danger) 45%,var(--line));color:var(--danger)}.switchboard-settings button:disabled{cursor:not-allowed;opacity:.52}.switchboard-feedback{margin:0;color:var(--muted);font-size:12px}.switchboard-feedback.error{color:var(--danger)}.switchboard-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.switchboard-summary div{padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}.switchboard-summary strong,.switchboard-summary small{display:block;overflow:hidden;text-overflow:ellipsis}.switchboard-summary strong{color:var(--text-strong)}.switchboard-summary small{margin-top:2px;color:var(--muted);font-size:10px}.switchboard-list{display:grid;gap:8px}.switchboard-item{display:grid;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}.switchboard-item-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.switchboard-item-head strong,.switchboard-item-head small{display:block}.switchboard-item-head strong{color:var(--text-strong)}.switchboard-item-head small{margin-top:2px;color:var(--muted);font-size:11px}.switchboard-item-meta{color:var(--muted);font-size:11px;text-align:right}.switchboard-item-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px}.switchboard-mapping-controls{grid-template-columns:minmax(0,1fr) auto auto auto}.switchboard-empty{margin:0;padding:20px;color:var(--muted);text-align:center}.switchboard-settings-note{margin:0;color:var(--muted);font-size:11px}.switchboard-destructive{padding:12px;border:1px solid color-mix(in srgb,var(--danger) 30%,var(--line));border-radius:7px;background:color-mix(in srgb,var(--danger) 5%,var(--panel))}.switchboard-diagnostic-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.switchboard-diagnostic{min-width:0;border:1px solid var(--line);border-radius:7px;background:var(--panel);overflow:hidden}.switchboard-diagnostic header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-bottom:1px solid var(--line-soft)}.switchboard-diagnostic h3{margin:0;color:var(--text-strong);font-size:12px}.switchboard-count{min-width:22px;padding:2px 6px;border-radius:999px;background:var(--accent-subtle);color:var(--accent-strong);font-size:10px;font-weight:800;text-align:center}.switchboard-delivery{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:9px 11px;border-bottom:1px solid var(--line-soft)}.switchboard-delivery:last-child{border-bottom:0}.switchboard-delivery strong,.switchboard-delivery small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.switchboard-delivery small{margin-top:2px;color:var(--muted);font-size:10px}.switchboard-state{color:var(--muted);font-size:11px;white-space:nowrap}.switchboard-warning{margin:0;padding:10px 11px;border:1px solid color-mix(in srgb,var(--warning,#eab308) 40%,var(--line));border-radius:7px;background:color-mix(in srgb,var(--warning,#eab308) 7%,var(--panel));color:var(--text)}.switchboard-destructive strong{display:block;color:var(--text-strong)}.switchboard-destructive p{margin:3px 0 10px;color:var(--muted);font-size:11px}.switchboard-connection-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}.switchboard-connection-bar .switchboard-field{margin:0}.switchboard-create{padding:12px;border:1px solid var(--accent);border-radius:7px;background:var(--accent-subtle)}.switchboard-create h3{margin:0;color:var(--text-strong);font-size:13px}.switchboard-create-actions{display:flex;justify-content:flex-end;gap:8px}@media(max-width:650px){.switchboard-summary{grid-template-columns:1fr}.switchboard-item-controls,.switchboard-mapping-controls,.switchboard-connection-bar{grid-template-columns:1fr}.switchboard-item-controls button,.switchboard-connection-bar button{width:100%}.switchboard-actions{align-items:stretch;flex-direction:column}.switchboard-actions>div,.switchboard-create-actions{display:grid}.switchboard-actions button,.switchboard-create-actions button{width:100%}.switchboard-item-head{flex-direction:column}.switchboard-item-meta{text-align:left}.switchboard-diagnostic-grid{grid-template-columns:1fr}.switchboard-delivery{grid-template-columns:1fr}.switchboard-state{white-space:normal}}
-`;
+const DEFAULT_AGENT = '__bot_default__';
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -16,187 +13,401 @@ function el(tag, attrs = {}, ...children) {
   }
   node.append(...children); return node;
 }
-function message(error, fallback) { return error instanceof Error && error.message ? error.message.replaceAll('_', ' ') : fallback; }
+function message(error, fallback) {
+  const code = error instanceof Error ? error.message : '';
+  const explanations = {
+    agent_required: 'Choose who answers this bot before allowing a server.',
+    agent_not_found: 'That goblin is unavailable. Choose an enabled goblin.',
+    agent_disabled: 'That goblin is disabled. Choose an enabled goblin.',
+    telegram_auth_failed: 'Telegram rejected this token. Check the token from BotFather.',
+    discord_auth_failed: 'Discord rejected this token. Check the token in the Developer Portal.',
+    telegram_bot_changed_add_connection: 'That token belongs to a different bot. Use Add bot instead.',
+    discord_bot_changed_add_connection: 'That token belongs to a different bot. Use Add bot instead.',
+    telegram_bot_already_connected: 'This Telegram bot is already connected.',
+    discord_bot_already_connected: 'This Discord bot is already connected.',
+  };
+  return explanations[code] || (code ? code.replaceAll('_', ' ') : fallback);
+}
 function label(item) { return String(item?.chatTitle || item?.title || item?.chatId || 'Unnamed chat'); }
-function topic(item) { return item?.topicId !== null && item?.topicId !== undefined ? ` · topic ${item.topicId}` : ''; }
+function topic(item) { return item?.topicId != null ? ` · topic ${item.topicId}` : ''; }
 function date(value) { if (!value) return '—'; const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString(); }
 function transportType(value) { return value === 'discord' ? 'discord' : 'telegram'; }
 function transportName(value) { return transportType(value) === 'discord' ? 'Discord' : 'Telegram'; }
+function inherited(item) { return (item.inheritedAgent ?? item.inherited) === true; }
 function normalizeConnection(value = {}, core = {}) {
   const transport = value.transport || {};
-  return { agentId: value.agentId ?? null, servers: value.servers || [], pendingServers: value.pendingServers || [], id: String(value.id || 'default'), name: String(value.name || (value.id === 'default' || !value.id ? 'Default bot' : value.id)), transportType: transportType(value.transportType), enabled: value.enabled === true || transport.enabled === true, tokenConfigured: value.tokenConfigured === true || value.bot?.configured === true, bot: value.bot || value.botIdentity || {}, transport, core: { available: core.available === true, reason: core.reason }, mappings: Array.isArray(value.mappings) ? value.mappings : [], pending: Array.isArray(value.pending) ? value.pending : Array.isArray(value.pendingAdmissions) ? value.pendingAdmissions : [], deliveries: Array.isArray(value.deliveries) ? value.deliveries : Array.isArray(value.recentDeliveries) ? value.recentDeliveries : [] };
+  return { ...value, agentId: value.agentId ?? null, servers: value.servers || [], pendingServers: value.pendingServers || [], id: String(value.id || 'default'), name: String(value.name || 'Default bot'), transportType: transportType(value.transportType), enabled: typeof value.enabled === 'boolean' ? value.enabled : transport.enabled === true, tokenConfigured: typeof value.tokenConfigured === 'boolean' ? value.tokenConfigured : value.bot?.configured === true, bot: value.bot || value.botIdentity || {}, transport, core: value.coreAgentTurns || { available: core.available === true, reason: core.reason }, mappings: value.mappings || [], pending: value.pending || value.pendingAdmissions || [], deliveries: value.deliveries || value.recentDeliveries || [] };
 }
 function normalize(value = {}) {
   const core = value.coreAgentTurns || value.core || {};
-  const source = Array.isArray(value.connections) && value.connections.length ? value.connections : [{ ...value, id: 'default', name: value.name || 'Default bot' }];
+  // An explicitly empty registry is not a legacy default connection.
+  const source = Array.isArray(value.connections) ? value.connections : [{ ...value, id: 'default', name: value.name || 'Default bot' }];
   return { core, connections: source.map(item => normalizeConnection(item, core)) };
-}
-function agentOptions(agents, selected = '') {
-  return [{ id: '', name: 'Select an agent' }, ...agents.filter(agent => agent.enabled !== false).map(agent => ({ id: String(agent.id), name: String(agent.name || agent.id) }))].map(agent => { const option = el('option', { value: agent.id, text: agent.name }); option.selected = agent.id === selected; return option; });
 }
 function request(api, controller, path, init = {}) { return api(path, { ...init, signal: controller.signal, headers: { ...(init.body ? { 'content-type': 'application/json' } : {}), ...(init.headers || {}) } }); }
 
-export function mountSettings({ section, primary, agents = [], api }) {
+// Presentation is the host's Settings API, not a second design system. See
+// Burrow-UI/docs/MOD_SETTINGS_UI_API.md and Connections → MCP servers.
+export function mountSettings({ section, primary, overflow = null, agents = [], api, confirm, navigate, setDraft }) {
   if (['status', 'configuration', 'pending-admissions', 'chat-mappings'].includes(section)) section = section === 'status' ? 'diagnostics' : 'bots';
   if (!settingsSections.some(item => item.id === section)) return;
-  const controller = new AbortController(); let mounted = true; let loading = true; let busy = false; let failed = ''; let feedback = ''; let aggregate = null; let adding = false;
-  const panel = el('section', { className: 'setting-section switchboard-settings', 'aria-labelledby': `switchboard-${section}-heading` });
-  const style = el('style', { text: styles }); primary.replace([style, panel]);
+  const panel = el('section', { className: 'setting-section', 'aria-label': section === 'bots' ? 'Switchboard bots' : 'Switchboard diagnostics' });
+  const inventory = el('div', { className: overflow ? 'settings-overflow-content memory-saved' : '', 'aria-label': 'Your bots' });
+  primary.replace(panel);
+  if (![confirm, navigate, setDraft].every(value => typeof value === 'function')) {
+    panel.append(el('h2', { text: 'Switchboard settings unavailable' }), el('p', { className: 'settings-request-error', role: 'alert', text: 'This Switchboard editor needs the updated Burrow Settings host. Update Burrow UI and Switchboard together. Existing bots continue running.' }));
+    return () => panel.remove();
+  }
+  if (overflow) overflow.replace(inventory);
+  const controller = new AbortController();
+  let mounted = true, loading = false, busy = false, confirming = false, aggregate = null, editor = null;
+  let feedback = '', failed = '', stateRevision = 0, editRevision = 0, saveControl = null, dirtyControl = null, currentForm = null;
+  const pendingAgents = new Map();
   const connection = () => aggregate?.connections.find(item => item.id === selectedConnectionId) || aggregate?.connections[0] || null;
-  const reconcileSelection = preferred => { const ids = aggregate?.connections.map(item => item.id) || []; selectedConnectionId = ids.includes(preferred) ? preferred : ids.includes(selectedConnectionId) ? selectedConnectionId : ids[0] || 'default'; };
-  const setFeedback = (value, error = false) => { feedback = value; failed = error ? value : ''; render(); };
-  async function load(success = '') {
-    loading = true; failed = ''; feedback = ''; render();
-    try { aggregate = normalize(await request(api, controller, '/configuration')); reconcileSelection(selectedConnectionId); feedback = success; }
-    catch (error) { if (!mounted || controller.signal.aborted) return; failed = message(error, 'Could not load Switchboard configuration.'); }
-    finally { if (mounted) { loading = false; busy = false; render(); } }
+  const pathFor = state => `/connections/${encodeURIComponent(state.id)}`;
+  const enabledAgent = id => agents.some(item => item.id === id && item.enabled !== false);
+  const agentName = id => agents.find(item => item.id === id)?.name || id || 'No goblin';
+  const responderName = id => `${agentName(id)}${enabledAgent(id) ? '' : ' (unavailable)'}`;
+  const draftValues = draft => draft.kind === 'chat' ? [draft.agentId] : [draft.name, draft.transport, draft.agentId, draft.enabled, draft.token];
+  const dirty = () => Boolean(editor && JSON.stringify(draftValues(editor)) !== editor.baseline);
+  function botDraft(state = null) {
+    const draft = { kind: state ? 'bot' : 'new', connectionId: state?.id, name: state?.name || '', transport: state?.transportType || 'telegram', agentId: state?.agentId || '', originalAgentId: state?.agentId || '', enabled: state?.enabled ?? true, token: '' };
+    draft.baseline = JSON.stringify(draftValues(draft)); return draft;
   }
-  async function mutate(path, init, success, preferred = selectedConnectionId) {
-    busy = true; failed = ''; feedback = ''; render();
-    try { const response = await request(api, controller, path, init); if (!mounted) return; aggregate = normalize(response); reconcileSelection(preferred); adding = false; busy = false; feedback = success; render(); }
-    catch (error) { if (!mounted || controller.signal.aborted) return; busy = false; setFeedback(message(error, 'The change could not be saved.'), true); }
+  function chatDraft(state, item) {
+    const draft = { kind: 'chat', connectionId: state.id, id: item.id, agentId: inherited(item) && state.agentId ? DEFAULT_AGENT : item.agentId || '' };
+    draft.baseline = JSON.stringify(draftValues(draft)); return draft;
   }
-  function heading(title) { return [el('h2', { id: `switchboard-${section}-heading`, text: title })]; }
-  function feedbackNode() { return failed ? el('p', { className: 'switchboard-feedback error', role: 'alert', text: failed }) : feedback ? el('p', { className: 'switchboard-feedback', role: 'status', 'aria-live': 'polite', text: feedback }) : null; }
-  function connectionBar(allowAdd = false) {
-    const select = el('select', { id: `switchboard-${section}-connection`, 'aria-label': 'Bot connection' }, ...aggregate.connections.map(item => { const suffix = item.bot?.username ? ` (@${String(item.bot.username).replace(/^@/, '')})` : ''; const option = el('option', { value: item.id, text: `${item.name} · ${transportName(item.transportType)}${suffix}` }); option.selected = item.id === selectedConnectionId; return option; }));
-    select.value = selectedConnectionId; select.disabled = busy;
-    select.addEventListener('change', () => { selectedConnectionId = select.value; failed = ''; feedback = ''; adding = false; render(); });
-    const children = [el('label', { className: 'switchboard-field', htmlFor: select.id }, document.createTextNode('Bot connection'), select)];
-    if (allowAdd) { const add = el('button', { type: 'button', text: 'Add bot connection' }); add.disabled = busy; add.addEventListener('click', () => { adding = true; failed = ''; feedback = ''; render(); }); children.push(add); }
-    return el('div', { className: 'switchboard-connection-bar' }, ...children);
+  function publish() {
+    if (!mounted) return;
+    if (saveControl) saveControl.disabled = busy || !dirty() || Boolean(editor?.orphaned);
+    if (dirtyControl) {
+      const chatSaving = editor?.kind === 'chat' && editor.saving && busy;
+      dirtyControl.textContent = chatSaving ? 'Saving…' : dirty() ? 'Unsaved changes' : '';
+      dirtyControl.hidden = !dirty() && !chatSaving;
+    }
+    setDraft({ dirty: dirty(), busy: busy || confirming, save: saveEditor, discard: discardDraft });
+  }
+  function update(draft, key, value) { if (busy || !mounted || editor !== draft) return; draft[key] = value; editRevision++; publish(); }
+  function discardDraft() {
+    if (!mounted || busy) return;
+    if (editor?.kind === 'new') editor = botDraft();
+    else if (editor) {
+      const state = aggregate?.connections.find(item => item.id === editor.connectionId);
+      const item = state?.mappings.find(item => item.id === editor.id);
+      editor = state ? editor.kind === 'chat' && item ? chatDraft(state, item) : botDraft(state) : botDraft();
+    }
+    failed = ''; feedback = ''; render();
+  }
+  function transition(proceed) {
+    if (!mounted || busy || confirming) return;
+    navigate(() => { if (mounted && !busy) { editor = null; editRevision++; failed = ''; feedback = ''; proceed(); render(); focus('editor-heading'); } });
+  }
+  function selectBot(id) {
+    if (section === 'bots' && selectedConnectionId === id && editor?.kind === 'bot') return;
+    transition(() => { selectedConnectionId = id; if (section === 'bots') editor = botDraft(connection()); });
+  }
+  function cancelEdit() { transition(() => { editor = botDraft(); }); }
+  function focus(key) { [...panel.querySelectorAll('[data-focus]'), ...inventory.querySelectorAll('[data-focus]')].find(node => node.getAttribute('data-focus') === key)?.focus(); }
+  function button(text, handler, attrs = {}) {
+    const node = el('button', { type: 'button', className: 'secondary', text, ...attrs }); node.disabled = busy || confirming || Object.hasOwn(attrs, 'disabled');
+    node.addEventListener('click', () => { if (mounted && !busy && !confirming) handler(); }); return node;
+  }
+  function field(title, control, help = '') { return el('label', { className: 'field' }, document.createTextNode(title), control, ...(help ? [el('small', { className: 'settings-help', text: help })] : [])); }
+  function input(attrs, value, onInput) {
+    const node = el('input', attrs); node.value = value; node.disabled = busy || confirming;
+    node.addEventListener('input', () => onInput(node.value)); return node;
+  }
+  function agentSelect(selected, first, onChange, attrs = {}) {
+    const options = [...first, ...agents.filter(item => item.enabled !== false).map(item => ({ id: item.id, name: item.name || item.id }))];
+    if (selected && !options.some(item => item.id === selected)) options.push({ id: selected, name: `${agentName(selected)} (unavailable)`, disabled: true });
+    const node = el('select', attrs, ...options.map(item => { const option = el('option', { value: item.id, text: item.name }); option.disabled = item.disabled === true; return option; }));
+    node.value = selected; node.disabled = busy || confirming;
+    node.addEventListener('change', () => { node.setCustomValidity(''); onChange(node.value); }); return node;
+  }
+  function feedbackNode() {
+    return failed ? el('p', { className: 'settings-request-error', role: 'alert', text: failed }) : feedback ? el('p', { className: 'settings-help', role: 'status', text: feedback }) : null;
+  }
+  function applyState(result, preferred = selectedConnectionId) {
+    aggregate = result;
+    selectedConnectionId = result.connections.some(item => item.id === preferred) ? preferred : result.connections[0]?.id || 'default';
+    if (editor && editor.kind !== 'new') {
+      const state = result.connections.find(item => item.id === editor.connectionId);
+      const item = state?.mappings.find(item => item.id === editor.id);
+      editor.orphaned = !state || (editor.kind === 'chat' && !item);
+      if (!editor.orphaned) {
+        // Rebase only untouched fields on the latest accepted state. Keep the
+        // draft object: unchanged polls must not disconnect existing handlers.
+        const accepted = editor.kind === 'chat' ? chatDraft(state, item) : botDraft(state);
+        const before = JSON.parse(editor.baseline);
+        const keys = editor.kind === 'chat' ? ['agentId'] : ['name', 'transport', 'agentId', 'enabled', 'token'];
+        keys.forEach((key, i) => { if (editor[key] === before[i]) editor[key] = accepted[key]; });
+        editor.baseline = accepted.baseline;
+        if (editor.kind === 'bot') editor.originalAgentId = accepted.originalAgentId;
+      }
+    }
+    const pending = new Set(result.connections.flatMap(state => state.pending.map(item => `${state.id}:${item.id}`)));
+    for (const key of pendingAgents.keys()) if (!pending.has(key)) pendingAgents.delete(key);
+  }
+  const interacting = () => dirty() || confirming || ['INPUT', 'SELECT', 'TEXTAREA', 'SUMMARY'].includes(document.activeElement?.tagName);
+  async function load({ quiet = false, initial = false } = {}) {
+    if (loading || busy || confirming || !mounted) return;
+    loading = true; const revision = stateRevision, editAtStart = editRevision, focusAtStart = document.activeElement;
+    let deferredForInteraction = false;
+    if (!quiet) { failed = ''; feedback = ''; if (!aggregate) render(); else updateRefresh(); }
+    const newInteraction = () => (editRevision !== editAtStart || document.activeElement !== focusAtStart) && ['INPUT', 'SELECT', 'TEXTAREA', 'SUMMARY'].includes(document.activeElement?.tagName);
+    let changed = false;
+    try {
+      const result = normalize(await request(api, controller, '/configuration'));
+      if (!mounted || revision !== stateRevision || (quiet && interacting()) || (deferredForInteraction = newInteraction())) return;
+      changed = JSON.stringify(result) !== JSON.stringify(aggregate) || Boolean(failed);
+      failed = ''; applyState(result);
+      if (section === 'bots' && !editor) editor = botDraft();
+      if (!quiet && !initial) feedback = 'Up to date.';
+    } catch (error) {
+      if (!mounted || controller.signal.aborted || revision !== stateRevision || (quiet && interacting())) return;
+      failed = `Could not refresh bots. ${message(error, 'Try again.')}`;
+      deferredForInteraction = newInteraction();
+      // Surface the failure without detaching the control currently being used.
+      if (deferredForInteraction) panel.append(feedbackNode()); else changed = true;
+    } finally { loading = false; if (mounted && !deferredForInteraction && (changed || (!quiet && editRevision === editAtStart))) render(); else if (mounted) updateRefresh(); }
+  }
+  function updateRefresh() {
+    for (const node of [...panel.querySelectorAll('[data-focus]'), ...inventory.querySelectorAll('[data-focus]')]) if (node.getAttribute('data-focus') === 'refresh') { node.textContent = loading ? 'Refreshing…' : 'Refresh'; node.disabled = loading || busy || confirming; }
+  }
+  async function mutate(path, init, success, { after, onFailure, focusKey = 'editor-heading' } = {}) {
+    if (busy || !mounted || editor?.orphaned) return false;
+    stateRevision++; busy = true; failed = ''; feedback = ''; render();
+    try {
+      const result = normalize(await request(api, controller, path, init));
+      if (!mounted) return false;
+      applyState(result); after?.(result); feedback = success; return true;
+    } catch (error) {
+      if (mounted && !controller.signal.aborted) {
+        failed = message(error, 'The change could not be saved. Your edits are still here.');
+        onFailure?.(failed);
+      }
+      return false;
+    } finally { busy = false; if (mounted) { render(); focus(focusKey); } }
+  }
+  const json = (method, body) => ({ method, body: JSON.stringify(body) });
+  async function saveEditor() {
+    if (!mounted || busy || confirming || editor?.orphaned || !editor) return false;
+    if (!dirty()) return true;
+    if (editor.kind !== 'chat' && !currentForm?.reportValidity()) { failed = 'Complete the required fields before saving.'; currentForm.append(feedbackNode()); return false; }
+    const draft = editor;
+    const state = aggregate.connections.find(item => item.id === draft.connectionId);
+    if (draft.kind === 'chat') {
+      const item = state?.mappings.find(item => item.id === draft.id);
+      // Validate the chat draft itself: a change starts saving without relying on
+      // a form that an asynchronous rerender may already have replaced.
+      if (!item || (draft.agentId === DEFAULT_AGENT ? !enabledAgent(state.agentId) : !enabledAgent(draft.agentId))) { draft.saveError = failed = 'Choose an enabled goblin.'; render(); return false; }
+      draft.saveError = ''; draft.saving = true;
+      try {
+        return await mutate(`${pathFor(state)}/mappings/${encodeURIComponent(item.id)}`, json('PUT', { agentId: draft.agentId === DEFAULT_AGENT ? null : draft.agentId, enabled: item.enabled !== false }), `${label(item)} saved.`, {
+          after: () => { const current = aggregate.connections.find(c => c.id === draft.connectionId); const saved = current?.mappings.find(m => m.id === draft.id); editor = saved ? chatDraft(current, saved) : botDraft(current); },
+          onFailure: error => { draft.saveError = failed = `Could not save chat. ${error}`; },
+          focusKey: 'chat-responder',
+        });
+      } finally { draft.saving = false; }
+    }
+    const isNew = draft.kind === 'new';
+    if (!draft.name.trim()) { failed = 'Enter a bot name.'; render(); return false; }
+    const previousIds = aggregate.connections.map(item => item.id);
+    const body = { name: draft.name.trim(), enabled: draft.enabled, ...(isNew || draft.agentId !== draft.originalAgentId ? { agentId: draft.agentId || null } : {}), ...(draft.token.trim() ? { token: draft.token.trim() } : {}), ...(isNew ? { transport: draft.transport } : {}) };
+    return mutate(isNew ? '/connections' : pathFor(state), json(isNew ? 'POST' : 'PUT', body), isNew ? 'Bot connected. Allow its chats below.' : 'Bot saved.', { after: result => {
+      if (isNew) selectedConnectionId = result.connections.find(item => !previousIds.includes(item.id))?.id || selectedConnectionId;
+      editor = botDraft(connection());
+    } });
+  }
+  async function confirmed(options, action) {
+    if (!mounted || busy || confirming) return;
+    const revision = stateRevision;
+    confirming = true; publish();
+    let accepted = false;
+    try { accepted = await confirm(options); }
+    finally { confirming = false; if (mounted) publish(); }
+    if (accepted && mounted && !busy && revision === stateRevision) action();
+  }
+  function destructive(options, action, connectionId, mappingId) {
+    // Resolve labels and identities AFTER a guard Save/Discard, not from the
+    // pre-save closure. A removed item cannot be rebound to another bot.
+    navigate(() => {
+      if (!mounted) return;
+      const state = aggregate.connections.find(c => c.id === connectionId);
+      const item = mappingId ? state?.mappings.find(m => m.id === mappingId) : null;
+      if (!state || (mappingId && !item)) { failed = 'This item was removed. Refresh to continue.'; render(); return; }
+      void confirmed(options(state, item), () => action(state, item));
+    });
+  }
+  function status(state) {
+    if (!state.tokenConfigured) return { text: 'Needs token', tone: 'warn' };
+    if (!state.enabled) return { text: 'Paused', tone: '' };
+    if (!state.core.available) return { text: 'Burrow unavailable', tone: 'warn' };
+    if (state.transport.error || ['degraded', 'error', 'failed'].includes(state.transport.health)) return { text: 'Connection problem', tone: 'warn' };
+    return state.transport.health === 'healthy' ? { text: 'Connected', tone: 'ok' } : { text: 'Connecting', tone: 'warn' };
+  }
+  function responder(state) {
+    if (state.agentId) return enabledAgent(state.agentId) ? `${agentName(state.agentId)} answers` : `${agentName(state.agentId)} is unavailable`;
+    const ids = [...new Set(state.mappings.filter(item => item.enabled !== false && item.agentId).map(item => item.agentId))];
+    return ids.length ? `${ids.map(responderName).join(', ')} · set per chat` : 'Choose who answers';
+  }
+  function stateNode(state) { const value = status(state); return el('span', { className: `settings-status ${value.tone}`, text: value.text }); }
+  function renderBotForm(state) {
+    const draft = editor, isNew = draft.kind === 'new';
+    const provider = el('select', { 'aria-label': 'Messaging app' }, el('option', { value: 'telegram', text: 'Telegram' }), el('option', { value: 'discord', text: 'Discord' }));
+    provider.value = draft.transport; provider.disabled = busy;
+    provider.addEventListener('change', () => { update(draft, 'transport', provider.value); render(); focus('editor-heading'); });
+    const name = input({ id: 'switchboard-name', required: 'required', maxlength: '80', placeholder: 'e.g. Hatchet on Telegram' }, draft.name, value => update(draft, 'name', value));
+    const assigned = agentSelect(draft.agentId, [{ id: '', name: 'Choose when approving a chat' }], value => update(draft, 'agentId', value), { 'aria-label': 'Who answers new chats' });
+    const token = input({ id: 'switchboard-token', type: 'password', autocomplete: 'new-password', maxlength: '4096', ...(isNew || (!state.tokenConfigured && draft.enabled) ? { required: 'required' } : {}), placeholder: isNew ? `Paste ${transportName(draft.transport)} bot token` : 'Leave blank to keep the saved token' }, draft.token, value => update(draft, 'token', value));
+    const enabled = el('input', { type: 'checkbox', 'aria-label': 'Receive messages' }); enabled.checked = draft.enabled; enabled.disabled = busy;
+    enabled.addEventListener('change', () => { update(draft, 'enabled', enabled.checked); token.required = isNew || (!state.tokenConfigured && enabled.checked); });
+    const tokenHelp = el('p', { className: 'settings-help' });
+    if (isNew || !state.tokenConfigured) {
+      if (draft.transport === 'telegram') tokenHelp.append(document.createTextNode('Create a Telegram bot with '), el('a', { href: 'https://t.me/BotFather', target: '_blank', rel: 'noopener noreferrer', text: 'BotFather' }), document.createTextNode(', then paste its token here.'));
+      else tokenHelp.append(document.createTextNode('Get the token in the '), el('a', { href: 'https://discord.com/developers/applications', target: '_blank', rel: 'noopener noreferrer', text: 'Discord Developer Portal' }), document.createTextNode('. Enable Message Content Intent and invite the bot with permission to view channels, send messages, read message history and send messages in threads.'));
+    } else tokenHelp.textContent = 'Leave blank to keep the saved token. Use Add bot for a different bot.';
+    const credentials = isNew || !state.tokenConfigured ? el('div', {}, field('Bot token', token), tokenHelp) : el('details', { className: 'settings-disclosure' }, el('summary', { text: 'Replace bot token' }), field('Replace token (optional)', token), tokenHelp);
+    if (draft.token) credentials.open = true;
+    saveControl = el('button', { type: 'submit', className: 'primary', text: busy ? 'Saving…' : isNew ? 'Connect bot' : 'Save bot' });
+    dirtyControl = el('p', { className: 'settings-status', role: 'status' });
+    currentForm = el('form', { className: 'settings-form', 'aria-label': isNew ? 'Add bot' : 'Edit bot' },
+      ...(isNew ? [field('Messaging app', provider)] : [el('p', { className: 'settings-description', text: `${transportName(state.transportType)}${state.bot.username ? ` · @${String(state.bot.username).replace(/^@/, '')}` : ''} · ${status(state).text}` })]),
+      el('div', { className: 'field-pair settings-field-pair' }, field('Bot name', name), field('Who answers new chats', assigned)),
+      el('label', { className: 'settings-checkbox-row' }, enabled, document.createTextNode('Receive messages')),
+      credentials, dirtyControl, ...(feedbackNode() ? [feedbackNode()] : []),
+      el('div', { className: 'model-actions' }, button('Cancel', cancelEdit), saveControl));
+    currentForm.addEventListener('submit', event => { event.preventDefault(); if (editor === draft) void saveEditor(); });
+    return currentForm;
+  }
+  function roomType(item, state) {
+    if (item.topicId != null) return `${state.transportType === 'discord' ? 'Thread' : 'Topic'} · ${item.topicId}`;
+    if (item.chatType === 'direct') return 'Direct message';
+    if (state.transportType === 'discord') return item.chatType === 'thread' ? 'Thread' : 'Channel';
+    return ['group', 'supergroup'].includes(item.chatType) ? 'Group · all topics included' : item.chatType === 'channel' ? 'Channel' : 'Chat';
+  }
+  function chatRow(item, state) {
+    const key = `chat-${state.id}-${item.id}`;
+    const server = state.servers.find(saved => saved.guildId === item.guildId);
+    const blocked = state.transportType === 'discord' && item.inherited === true && (!server || server.enabled === false);
+    const row = el('article', { className: 'settings-group', 'aria-label': label(item) },
+      el('div', { className: 'settings-row' }, el('strong', { text: label(item) }), el('span', { className: 'settings-status', text: item.enabled === false ? 'Paused' : blocked ? 'Server access paused' : 'Allowed' })),
+      el('p', { className: 'settings-help', text: `${roomType(item, state)} · ${item.agentId ? `${enabledAgent(item.agentId) ? `${agentName(item.agentId)} answers` : `${agentName(item.agentId)} is unavailable`}${inherited(item) ? ' · uses bot default' : ''}` : 'No goblin assigned'}` }));
+    if (state.transportType === 'discord' && item.inherited === true) row.append(el('p', { className: 'settings-help', text: `Access follows ${server?.name || 'the server'}; changing who answers does not bypass server access.` }));
+    row.append(el('div', { className: 'memory-connection-actions' },
+      button(item.enabled === false ? 'Resume' : 'Pause', () => void mutate(`${pathFor(state)}/mappings/${encodeURIComponent(item.id)}`, json('PUT', { enabled: item.enabled === false }), `${label(item)} ${item.enabled === false ? 'resumed' : 'paused'}.`, { focusKey: key }), { 'aria-label': `${item.enabled === false ? 'Resume' : 'Pause'} ${label(item)}`, 'data-focus': key }),
+      button('Change', () => transition(() => { const current = aggregate.connections.find(c => c.id === state.id); const saved = current?.mappings.find(m => m.id === item.id); if (saved) editor = chatDraft(current, saved); else { editor = botDraft(current); failed = 'This chat was removed. Refresh to continue.'; } }), { 'aria-label': `Change ${label(item)}` })));
+    return row;
+  }
+  function renderChatForm(state, item) {
+    const draft = editor;
+    const select = agentSelect(draft.agentId, state.agentId ? [{ id: DEFAULT_AGENT, name: `${agentName(state.agentId)} · bot default`, disabled: !enabledAgent(state.agentId) }] : [], value => {
+      if (!mounted || busy || confirming || editor !== draft || draft.agentId === value) return;
+      draft.saveError = ''; failed = ''; feedback = '';
+      update(draft, 'agentId', value);
+      if (dirty()) void saveEditor(); else render();
+    }, { 'aria-label': `Who answers in ${label(item)}`, 'data-focus': 'chat-responder', required: 'required' });
+    dirtyControl = el('p', { className: 'settings-status', role: 'status' });
+    const notice = draft.saveError ? el('p', { className: 'settings-request-error', role: 'alert', text: draft.saveError }) : feedbackNode();
+    const refreshError = draft.saveError && failed && failed !== draft.saveError ? feedbackNode() : null;
+    const retry = draft.saveError && dirty() ? button('Retry saving', () => { if (editor === draft) void saveEditor(); }) : null;
+    currentForm = el('form', { className: 'settings-form', 'aria-label': `Edit ${label(item)}` }, field('Who answers', select), dirtyControl, ...(notice ? [notice] : []), ...(refreshError ? [refreshError] : []), el('div', { className: 'model-actions' }, button('Cancel', () => transition(() => { editor = botDraft(connection()); })), ...(retry ? [retry] : [])));
+    currentForm.addEventListener('submit', event => event.preventDefault());
+    return [el('h2', { tabindex: '-1', 'data-focus': 'editor-heading', text: label(item) }), el('p', { className: 'settings-description', text: `${state.name} · ${roomType(item, state)}` }), currentForm,
+      el('details', { className: 'settings-disclosure' }, el('summary', { text: 'Chat details and removal' }), el('p', { className: 'settings-help', text: `Chat ID: ${item.chatId || item.channelId || 'unknown'}${topic(item)}` }), el('div', { className: 'settings-danger-actions' }, button('Remove chat access', () => destructive((state, item) => ({ title: 'Remove chat access?', message: `Remove “${label(item)}” from “${state.name}”? This does not delete the chat or affect other bots. If a parent group or server is allowed, its access still applies. Pause this chat instead to block messages here.`, confirmLabel: 'Remove chat access', tone: 'danger' }), (state, item) => void mutate(`${pathFor(state)}/mappings/${encodeURIComponent(item.id)}`, { method: 'DELETE' }, 'Chat access removed.', { after: () => { editor = botDraft(connection()); } }), state.id, item.id), { className: 'danger' })))];
+  }
+  function pendingRow(item, state) {
+    const key = `${state.id}:${item.id}`;
+    const selected = pendingAgents.get(key) ?? (enabledAgent(state.agentId) ? DEFAULT_AGENT : '');
+    const first = [{ id: '', name: 'Choose a goblin' }, ...(state.agentId ? [{ id: DEFAULT_AGENT, name: `${agentName(state.agentId)} · bot default`, disabled: !enabledAgent(state.agentId) }] : [])];
+    const select = agentSelect(selected, first, value => pendingAgents.set(key, value), { 'aria-label': `Who answers in ${label(item)}` });
+    return el('article', { className: 'settings-group', 'aria-label': `Request from ${label(item)}` }, el('strong', { text: label(item) }), el('p', { className: 'settings-help', text: roomType(item, state) }), field('Who answers', select),
+      el('div', { className: 'memory-connection-actions' }, button('Dismiss', () => void confirmed({ title: 'Dismiss request?', message: `Dismiss the request from “${label(item)}”? A later message can request access again.`, confirmLabel: 'Dismiss' }, () => void mutate(`${pathFor(state)}/pending/${encodeURIComponent(item.id)}/deny`, { method: 'POST' }, `${label(item)} dismissed.`))),
+        button('Allow chat', () => {
+          if (!select.value || (select.value === DEFAULT_AGENT ? !enabledAgent(state.agentId) : !enabledAgent(select.value))) { select.setCustomValidity('Choose an enabled goblin.'); select.reportValidity(); return; }
+          pendingAgents.set(key, select.value);
+          void mutate(`${pathFor(state)}/pending/${encodeURIComponent(item.id)}/approve`, json('POST', select.value === DEFAULT_AGENT ? {} : { agentId: select.value }), `${label(item)} allowed.`);
+        })));
+  }
+  function serverRow(server, approved, state) {
+    const name = server.name || server.guildId;
+    const toggle = button(!approved ? 'Allow server' : server.enabled === false ? 'Resume' : 'Pause', () => void mutate(`${pathFor(state)}/servers/${encodeURIComponent(server.guildId)}`, json('PUT', { enabled: !approved || server.enabled === false }), `${name} ${!approved ? 'allowed' : server.enabled === false ? 'resumed' : 'paused'}.`), { 'aria-label': `${!approved ? 'Allow' : server.enabled === false ? 'Resume' : 'Pause'} ${name}` });
+    toggle.disabled = busy || ((!approved || server.enabled === false) && !enabledAgent(state.agentId));
+    const row = el('article', { className: 'settings-group', 'aria-label': name }, el('div', { className: 'settings-row' }, el('strong', { text: name }), el('span', { className: 'settings-status', text: !approved ? 'Waiting for approval' : server.enabled === false ? 'Paused' : 'Allowed' })), el('p', { className: 'settings-help', text: state.agentId ? `${agentName(state.agentId)} answers · bot default` : 'Choose who answers new chats and Save bot before allowing this server.' }));
+    const actions = el('div', { className: 'memory-connection-actions' }, toggle);
+    if (approved) actions.append(button('Revoke', () => void confirmed({ title: 'Revoke server access?', message: `Revoke “${name}”? This removes inherited access to its channels and threads. Explicit chat exceptions still apply.`, confirmLabel: 'Revoke', tone: 'danger' }, () => void mutate(`${pathFor(state)}/servers/${encodeURIComponent(server.guildId)}`, { method: 'DELETE' }, `${name} access revoked.`)), { 'aria-label': `Revoke ${name}`, className: 'danger' }));
+    row.append(actions); return row;
+  }
+  function accessSections(state) {
+    const parts = [];
+    if (!state.agentId && state.mappings.some(item => item.agentId)) parts.push(el('p', { className: 'settings-help', text: 'Existing chats keep their own assignments. Choose who answers when allowing a new chat.' }));
+    if (state.pending.length) parts.push(el('section', { className: 'settings-group', 'aria-label': 'Waiting for approval' }, el('h3', { text: 'Waiting for approval' }), ...state.pending.map(item => pendingRow(item, state))));
+    if (state.transportType === 'discord') {
+      const servers = [...state.servers, ...state.pendingServers.filter(item => !state.servers.some(saved => saved.guildId === item.guildId))];
+      parts.push(el('section', { className: 'settings-group', 'aria-label': 'Allowed servers' }, el('h3', { text: 'Servers' }), ...servers.map(item => serverRow(item, state.servers.some(saved => saved.guildId === item.guildId), state)), ...(!servers.length ? [el('p', { className: 'settings-empty', text: 'Invite the bot to a Discord server, then allow it here.' })] : [])));
+    }
+    const main = state.transportType === 'telegram' ? state.mappings.filter(item => item.topicId == null) : state.mappings.filter(item => item.chatType === 'direct');
+    parts.push(el('section', { className: 'settings-group', 'aria-label': 'Allowed chats' }, el('h3', { text: state.transportType === 'discord' ? 'Direct messages' : 'Chats' }), ...main.map(item => chatRow(item, state)), ...(!main.length ? [el('p', { className: 'settings-empty', text: 'Send this bot a message. The request will appear here for approval.' })] : [])));
+    const exceptions = state.mappings.filter(item => !main.includes(item));
+    if (exceptions.length) parts.push(el('details', { className: 'settings-disclosure' }, el('summary', { text: `${state.transportType === 'discord' ? 'Channel and thread' : 'Topic'} exceptions (${exceptions.length})` }), el('p', { className: 'settings-help', text: 'Chat-specific settings take priority over group or server access.' }), ...exceptions.map(item => chatRow(item, state))));
+    return parts;
+  }
+  function renderEditor() {
+    if (!editor) editor = botDraft();
+    if (editor.orphaned) { panel.replaceChildren(el('h2', { text: 'This item was removed', tabindex: '-1', 'data-focus': 'editor-heading' }), el('p', { className: 'settings-request-error', role: 'alert', text: 'Your unsaved edits cannot be applied because the original bot or chat no longer exists.' }), button('Discard edits', discardDraft)); return; }
+    const state = aggregate.connections.find(item => item.id === editor.connectionId);
+    if (editor.kind === 'chat') { panel.replaceChildren(...renderChatForm(state, state.mappings.find(item => item.id === editor.id))); return; }
+    panel.replaceChildren(el('h2', { tabindex: '-1', 'data-focus': 'editor-heading', text: editor.kind === 'new' ? 'Add bot' : state.name }), renderBotForm(state));
+    if (state) {
+      if (state.agentId && !enabledAgent(state.agentId)) panel.append(el('p', { className: 'settings-request-error', role: 'alert', text: `${agentName(state.agentId)} is unavailable. Custom chat assignments are unchanged.` }));
+      if (state.transport.error) panel.append(el('p', { className: 'settings-request-error', role: 'alert', text: message(new Error(state.transport.error), 'Connection problem.') }));
+      panel.append(...accessSections(state), el('details', { className: 'settings-disclosure' }, el('summary', { text: 'Remove bot or clear token' }), el('div', { className: 'settings-danger-actions' },
+        button('Clear saved token', () => destructive(state => ({ title: 'Clear saved token?', message: `Clear the token for “${state.name}”? This stops new messages, but keeps its chats and assignments.`, confirmLabel: 'Clear token', tone: 'danger' }), state => void mutate(`${pathFor(state)}/token/clear`, { method: 'POST' }, 'Token cleared. Chats and assignments kept.', { after: () => { editor = botDraft(connection()); } }), state.id), { className: 'danger', ...(!state.tokenConfigured ? { disabled: 'disabled' } : {}) }),
+        button('Remove bot', () => destructive(state => ({ title: 'Remove bot?', message: `Remove “${state.name}” and its Switchboard token, access and routing settings? This does not delete Telegram/Discord chats or Burrow conversations. Other bots are not affected.`, confirmLabel: 'Remove bot', tone: 'danger' }), state => void mutate(pathFor(state), { method: 'DELETE' }, `${state.name} removed.`, { after: () => { editor = botDraft(); } }), state.id), { className: 'danger' }))));
+    }
+  }
+  function renderInventory() {
+    const list = el('div', { className: 'memory-connection-list' });
+    for (const state of aggregate.connections) {
+      const waiting = state.pending.length + state.pendingServers.filter(item => !state.servers.some(saved => saved.guildId === item.guildId)).length;
+      const select = button('', () => selectBot(state.id), { className: 'memory-connection-select', 'aria-pressed': String(editor?.kind !== 'new' && state.id === selectedConnectionId), 'aria-label': `Manage ${state.name}`, 'data-focus': `bot-${state.id}` });
+      select.append(el('strong', { text: state.name }), el('small', { text: `${transportName(state.transportType)} · ${status(state).text} · ${responder(state)}${waiting ? ` · ${waiting} waiting for approval` : ''}` }));
+      list.append(el('article', { className: 'memory-connection' }, select));
+    }
+    const refresh = button(loading ? 'Refreshing…' : 'Refresh', () => void load(), { 'data-focus': 'refresh' }); refresh.disabled = loading || busy || confirming;
+    inventory.replaceChildren(...(!aggregate.connections.length ? [el('p', { className: 'settings-empty', text: 'No bots connected yet.' })] : [list]), el('div', { className: 'settings-row settings-group' }, refresh, ...(section === 'bots' ? [button('Add bot', () => transition(() => { editor = botDraft(); }))] : [])));
   }
   function renderStatus() {
-    const state = connection(); if (!state) return renderNoConnections('Switchboard status');
-    const provider = transportName(state.transportType);
-    const botName = state.bot.username ? `@${String(state.bot.username).replace(/^@/, '')}` : state.tokenConfigured ? String(state.bot.displayName || 'Configured') : 'Not configured';
-    const polling = String(state.transport.polling || (state.enabled ? 'unknown' : 'stopped'));
-    const summary = el('div', { className: 'switchboard-summary' },
-      el('div', {}, el('strong', { text: String(state.transport.health || (state.enabled ? 'unknown' : 'stopped')) }), el('small', { text: `${provider} transport` })),
-      el('div', {}, el('strong', { text: polling }), el('small', { text: state.transport.lastPollAt ? `Last ${state.transportType === 'discord' ? 'gateway activity' : 'poll'} ${date(state.transport.lastPollAt)}` : state.transportType === 'discord' ? 'Gateway state' : 'Polling state' })),
-      el('div', {}, el('strong', { text: botName }), el('small', { text: state.bot.id ? `Bot ID ${state.bot.id}` : `${provider} bot` })),
-      el('div', {}, el('strong', { text: state.core.available ? 'Available' : 'Unavailable' }), el('small', { text: state.core.available ? 'Core agent turns' : String(state.core.reason || 'Core agent turns') }))
-    );
-    const list = (title, items, renderItem, empty) => { const body = el('div'); if (!items.length) body.append(el('p', { className: 'switchboard-empty', text: empty })); else items.forEach(item => body.append(renderItem(item))); return el('section', { className: 'switchboard-diagnostic' }, el('header', {}, el('h3', { text: title }), el('span', { className: 'switchboard-count', text: String(items.length), 'aria-label': `${items.length} items` })), body); };
-    const diagnostics = el('div', { className: 'switchboard-diagnostic-grid' },
-      list('Approved mappings', state.mappings, item => el('article', { className: 'switchboard-delivery' }, el('div', {}, el('strong', { text: label(item) }), el('small', { text: `${String(item.chatType || 'chat')}${topic(item)} · ${String(item.agentName || item.agentId || 'Unassigned')}` })), el('span', { className: 'switchboard-state', text: item.enabled === false ? 'Disabled' : 'Enabled' })), 'No approved mappings.'),
-      list('Pending admissions', state.pending, item => el('article', { className: 'switchboard-delivery' }, el('div', {}, el('strong', { text: label(item) }), el('small', { text: `${String(item.chatType || 'chat')}${topic(item)}` })), el('span', { className: 'switchboard-state', text: date(item.requestedAt) })), 'No pending admissions.'));
-    const deliveries = list('Recent deliveries', state.deliveries, item => el('article', { className: 'switchboard-delivery' }, el('div', {}, el('strong', { text: `${item.direction === 'outbound' ? 'To' : 'From'} ${label(item)}` }), el('small', { text: `${String(item.agentName || item.agentId || 'Unassigned')} · ${date(item.at || item.createdAt || item.updatedAt)}` })), el('span', { className: 'switchboard-state', text: String(item.status || 'unknown') })), 'No deliveries recorded yet.');
-    const warnings = [];
-    if (state.transport.error) warnings.push(el('p', { className: 'switchboard-warning', role: 'alert', text: `${provider} transport: ${state.transport.error}` }));
-    if (!state.core.available) warnings.push(el('p', { className: 'switchboard-warning', text: `New messages cannot reach agents: ${String(state.core.reason || 'Core external agent turns are unavailable.')}` }));
-    panel.replaceChildren(...heading('Switchboard status', 'Transport and routing diagnostics for the selected bot connection.'), connectionBar(), ...(feedbackNode() ? [feedbackNode()] : []), ...warnings, summary, diagnostics, deliveries);
-  }
-  function renderCreate() {
-    const provider = el('select', { id: 'switchboard-new-transport', 'aria-label': 'Transport' }, el('option', { value: 'telegram', text: 'Telegram' }), el('option', { value: 'discord', text: 'Discord' })); provider.value = 'telegram';
-    const name = el('input', { id: 'switchboard-new-name', required: 'required', maxlength: '80', placeholder: 'Hatchet bot' });
-    const token = el('input', { id: 'switchboard-new-token', type: 'password', required: 'required', autocomplete: 'new-password', maxlength: '4096', placeholder: 'Paste Telegram bot token' });
-    const assigned = el('select', { 'aria-label': 'Assigned goblin for new bot' }, ...agentOptions(agents));
-    const enabled = el('input', { type: 'checkbox' }); enabled.checked = true;
-    const tokenNote = el('small', { text: 'Write-only. A Telegram bot can belong to only one connection.' });
-    const enabledTitle = el('strong', { text: 'Enable polling' });
-    const enabledNote = el('small', { text: 'Start receiving updates after the connection is created.' });
-    const discordSetup = el('p', { className: 'switchboard-warning', text: 'Before connecting Discord, enable the Message Content intent and invite the bot with View Channels, Send Messages, Read Message History, and Send Messages in Threads permissions.' }); discordSetup.hidden = true;
-    const updateProvider = () => { const discord = provider.value === 'discord'; token.setAttribute('placeholder', `Paste ${discord ? 'Discord' : 'Telegram'} bot token`); tokenNote.textContent = discord ? 'Write-only. Use a dedicated bot for this goblin connection.' : 'Write-only. A Telegram bot can belong to only one connection.'; enabledTitle.textContent = discord ? 'Enable gateway' : 'Enable polling'; enabledNote.textContent = discord ? 'Connect to Discord after the connection is created.' : 'Start receiving updates after the connection is created.'; discordSetup.hidden = !discord; };
-    provider.addEventListener('change', updateProvider);
-    const cancel = el('button', { type: 'button', text: 'Cancel' }); const create = el('button', { type: 'submit', className: 'primary', text: busy ? 'Adding…' : 'Add connection' });
-    for (const input of [provider, name, token, assigned, enabled, cancel, create]) input.disabled = busy;
-    cancel.addEventListener('click', () => { adding = false; render(); });
-    const form = el('form', { className: 'switchboard-create switchboard-fields' }, el('h3', { text: 'New bot connection' }), el('label', { className: 'switchboard-field', htmlFor: provider.id }, document.createTextNode('Transport'), provider), el('label', { className: 'switchboard-field', htmlFor: name.id }, document.createTextNode('Connection name'), name), el('label', { className: 'switchboard-field', htmlFor: token.id }, document.createTextNode('Bot token'), token, tokenNote), el('label', { className: 'switchboard-field' }, document.createTextNode('Assigned goblin'), assigned), discordSetup, el('label', { className: 'switchboard-toggle' }, enabled, el('span', {}, enabledTitle, enabledNote)), el('div', { className: 'switchboard-create-actions' }, cancel, create));
-    form.addEventListener('submit', event => { event.preventDefault(); if (!form.reportValidity()) return; void mutate('/connections', { method: 'POST', body: JSON.stringify({ name: name.value.trim(), token: token.value.trim(), enabled: enabled.checked, transport: provider.value, agentId: assigned.value || null }) }, `${name.value.trim()} added.`); });
-    return form;
-  }
-  function renderConfiguration() {
     const state = connection();
-    const parts = [...heading('Bots'), connectionBar(true)];
-    if (adding) parts.push(renderCreate());
-    if (!state) { if (feedbackNode()) parts.push(feedbackNode()); parts.push(el('p', { className: 'switchboard-empty', text: 'Add a bot connection to begin.' })); panel.replaceChildren(...parts); return; }
-    const provider = transportName(state.transportType);
-    const assigned = el('select', { 'aria-label': 'Assigned goblin' }, ...agentOptions(agents, state.agentId || '')); assigned.value = state.agentId || ''; assigned.disabled = busy;
-    const name = el('input', { id: 'switchboard-name', required: 'required', maxlength: '80' }); name.value = state.name; name.disabled = busy;
-    const enabled = el('input', { id: 'switchboard-enabled', type: 'checkbox' }); enabled.checked = state.enabled; enabled.disabled = busy;
-    const token = el('input', { id: 'switchboard-token', type: 'password', autocomplete: 'new-password', maxlength: '4096', placeholder: state.tokenConfigured ? 'Leave blank to keep the current token' : `Paste ${provider} bot token` }); token.disabled = busy;
-    const save = el('button', { type: 'submit', className: 'primary', text: busy ? 'Saving…' : 'Save connection' }); save.disabled = busy;
-    const setup = state.transportType === 'discord' && !state.tokenConfigured ? el('p', { className: 'switchboard-warning', text: 'Discord requires the Message Content intent and an invite with View Channels, Send Messages, Read Message History, and Send Messages in Threads permissions.' }) : null;
-    const form = el('form', { className: 'switchboard-fields' }, el('label', { className: 'switchboard-field' }, document.createTextNode('Assigned goblin'), assigned), el('label', { className: 'switchboard-field' }, document.createTextNode('Transport'), el('input', { value: provider, disabled: 'disabled', 'aria-label': 'Connection transport' }), ), el('label', { className: 'switchboard-field', htmlFor: name.id }, document.createTextNode('Connection name'), name), el('label', { className: 'switchboard-toggle' }, enabled, el('span', {}, el('strong', { text: `Enable ${state.transportType === 'discord' ? 'Discord gateway' : 'Telegram polling'}` }), el('small', { text: `This connection receives ${provider} messages only while enabled.` }))), el('label', { className: 'switchboard-field', htmlFor: token.id }, document.createTextNode('Bot token'), token, el('small', { text: state.tokenConfigured ? 'A token is configured. Leave blank to preserve it. A different bot must be added as a new connection.' : 'Write-only. The saved token is never returned to this page.' })), ...(setup ? [setup] : []), el('div', { className: 'switchboard-summary' }, el('div', {}, el('strong', { text: state.bot.username ? `@${String(state.bot.username).replace(/^@/, '')}` : state.tokenConfigured ? 'Configured' : 'Not configured' }), el('small', { text: `${provider} bot` })), el('div', {}, el('strong', { text: String(state.transport.health || (state.enabled ? 'unknown' : 'stopped')) }), el('small', { text: 'Transport' })), el('div', {}, el('strong', { text: state.core.available ? 'Available' : 'Unavailable' }), el('small', { text: state.core.available ? 'Core agent turns' : String(state.core.reason || 'Core agent turns') }))), ...(feedbackNode() ? [feedbackNode()] : []), el('div', { className: 'switchboard-actions' }, el('p', { className: 'switchboard-settings-note', text: state.transportType === 'discord' ? 'DMs route every approved message. Each channel or thread shares context among its approved bots and route mentions of, or replies to, this bot.' : 'Groups include topics. Unmentioned messages reach participating goblins; mentions and replies target specific goblins.' }), el('div', {}, save)));
-    form.addEventListener('submit', event => { event.preventDefault(); if (!form.reportValidity()) return; const body = { name: name.value.trim(), enabled: enabled.checked, agentId: assigned.value || null }; if (token.value.trim()) body.token = token.value.trim(); void mutate(`/connections/${encodeURIComponent(state.id)}`, { method: 'PUT', body: JSON.stringify(body) }, 'Connection saved.'); });
-    const clear = el('button', { type: 'button', className: 'danger', text: busy ? 'Clearing…' : 'Clear configured token' }); clear.disabled = busy || !state.tokenConfigured;
-    clear.addEventListener('click', () => { if (!confirm(`Clear the ${provider} bot token for “${state.name}”? ${state.transportType === 'discord' ? 'The gateway' : 'Polling'} will stop until a token is saved.`)) return; void mutate(`/connections/${encodeURIComponent(state.id)}/token/clear`, { method: 'POST' }, `${provider} bot token cleared.`); });
-    const remove = el('button', { type: 'button', className: 'danger', text: busy ? 'Removing…' : 'Remove connection' }); remove.disabled = busy;
-    remove.addEventListener('click', () => { if (!confirm(`Remove “${state.name}”? Its credential, admissions, mappings, and delivery state will be permanently deleted.`)) return; const fallback = aggregate.connections.find(item => item.id !== state.id)?.id || 'default'; void mutate(`/connections/${encodeURIComponent(state.id)}`, { method: 'DELETE' }, `${state.name} removed.`, fallback); });
-    parts.push(form, el('div', { className: 'switchboard-destructive' }, el('strong', { text: 'Connection credential' }), el('p', { text: 'Clearing removes only this bot token. Blank token fields never clear it.' }), clear), el('div', { className: 'switchboard-destructive' }, el('strong', { text: 'Remove connection' }), el('p', { text: 'Permanently deletes this connection credential and its Switchboard state without affecting other bots.' }), remove));
-    panel.replaceChildren(...parts);
+    panel.replaceChildren(el('h2', { text: 'Diagnostics' }));
+    if (!state) { panel.append(el('p', { className: 'settings-empty', text: 'Open Bots to add a bot.' })); return; }
+    panel.append(el('p', { className: 'settings-description', text: state.name }));
+    const facts = el('dl', { className: 'settings-facts' });
+    for (const [title, value] of [
+      ['Connection', status(state).text], ['Transport', `${transportName(state.transportType)} · ${state.transport.health || 'unknown'}`],
+      ['Activity', `${state.transport.polling || 'unknown'} · ${date(state.transport.lastPollAt)}`], ['Bot', state.bot.username ? `@${state.bot.username}` : 'Not configured'],
+      ['Burrow', state.core.available ? 'Available' : state.core.reason || 'Unavailable'],
+    ]) facts.append(el('dt', { text: title }), el('dd', { text: value }));
+    panel.append(facts, ...(feedbackNode() ? [feedbackNode()] : []));
+    const list = (title, items, renderItem) => el('section', { className: 'settings-group' }, el('h3', { text: title }), ...items.map(renderItem), ...(!items.length ? [el('p', { className: 'settings-empty', text: 'None recorded.' })] : []));
+    const row = (title, subtitle, state) => el('article', { className: 'settings-group' }, el('strong', { text: title }), el('p', { className: 'settings-help', text: `${subtitle} · ${state}` }));
+    panel.append(list('Approved mappings', state.mappings, item => row(label(item), `${item.chatType || 'chat'}${topic(item)} · ${agentName(item.agentId)}`, item.enabled === false ? 'Paused' : 'Allowed')),
+      list('Pending admissions', state.pending, item => row(label(item), item.chatType || 'chat', date(item.requestedAt))),
+      list('Recent deliveries', state.deliveries, item => row(`${item.direction === 'outbound' ? 'To' : 'From'} ${label(item)}`, `${agentName(item.agentId)} · ${date(item.at || item.createdAt)}`, item.status || 'unknown')));
   }
-  function renderPending() {
-    const state = connection(); if (!state) return renderNoConnections('Pending admissions');
-    const list = el('div', { className: 'switchboard-list' });
-    if (!state.pending.length) list.append(el('p', { className: 'switchboard-empty', text: 'No chats are waiting for approval for this bot.' }));
-    for (const item of state.pending) {
-      const select = el('select', { 'aria-label': `Agent for ${label(item)}` }, ...agentOptions(agents)); select.children[0].textContent = state.agentId ? 'Use assigned goblin' : 'Select an agent'; select.disabled = busy;
-      const approve = el('button', { type: 'button', className: 'primary', text: 'Approve' }); const deny = el('button', { type: 'button', className: 'danger', text: 'Deny' }); approve.disabled = busy; deny.disabled = busy;
-      approve.addEventListener('click', () => { if (!select.value && !state.agentId) { select.setCustomValidity?.('Choose an agent.'); select.reportValidity?.(); return; } select.setCustomValidity?.(''); void mutate(`/connections/${encodeURIComponent(state.id)}/pending/${encodeURIComponent(item.id)}/approve`, { method: 'POST', body: JSON.stringify(select.value ? { agentId: select.value } : {}) }, `${label(item)} approved.`); });
-      deny.addEventListener('click', () => { if (!confirm(`Deny “${label(item)}”?`)) return; void mutate(`/connections/${encodeURIComponent(state.id)}/pending/${encodeURIComponent(item.id)}/deny`, { method: 'POST' }, `${label(item)} denied.`); });
-      list.append(el('article', { className: 'switchboard-item' }, el('div', { className: 'switchboard-item-head' }, el('div', {}, el('strong', { text: label(item) }), el('small', { text: `${String(item.chatType || 'chat')}${topic(item)} · ${String(item.chatId || 'unknown ID')}` })), el('span', { className: 'switchboard-item-meta', text: `Requested ${date(item.requestedAt)}` })), el('div', { className: 'switchboard-item-controls' }, select, el('div', {}, approve, document.createTextNode(' '), deny))));
-    }
-    panel.replaceChildren(...heading('Pending admissions', `Approve a ${transportName(state.transportType)} chat for the selected bot and choose its Burrow agent.`), connectionBar(), ...(feedbackNode() ? [feedbackNode()] : []), list);
-  }
-  function renderMappings() {
-    const state = connection(); if (!state) return renderNoConnections('Chat mappings');
-    const list = el('div', { className: 'switchboard-list' });
-    if (!state.mappings.length) list.append(el('p', { className: 'switchboard-empty', text: 'No approved chat mappings for this bot.' }));
-    for (const item of state.mappings) {
-      const select = el('select', { 'aria-label': `Agent for ${label(item)}` }, ...agentOptions(agents, String(item.agentId || ''))); select.value = String(item.agentId || ''); select.disabled = busy;
-      const enabled = el('input', { type: 'checkbox', 'aria-label': `Enable ${label(item)}` }); enabled.checked = item.enabled !== false; enabled.disabled = busy;
-      const save = el('button', { type: 'button', className: 'primary', text: 'Save' }); save.disabled = busy;
-      save.addEventListener('click', () => { if (!select.value) { select.setCustomValidity?.('Choose an agent.'); select.reportValidity?.(); return; } select.setCustomValidity?.(''); void mutate(`/connections/${encodeURIComponent(state.id)}/mappings/${encodeURIComponent(item.id)}`, { method: 'PUT', body: JSON.stringify({ agentId: select.value, enabled: enabled.checked }) }, `${label(item)} updated.`); });
-      const remove = el('button', { type: 'button', className: 'danger', text: 'Delete' }); remove.disabled = busy;
-      remove.addEventListener('click', () => { if (!confirm(`Delete the “${label(item)}” mapping from “${state.name}”? This removes only this bot connection’s Switchboard mapping. It does not delete the ${transportName(state.transportType)} chat or affect other bots. Inherited group or server access may still permit future messages.`)) return; void mutate(`/connections/${encodeURIComponent(state.id)}/mappings/${encodeURIComponent(item.id)}`, { method: 'DELETE' }, `${label(item)} mapping deleted.`); });
-      list.append(el('article', { className: 'switchboard-item' }, el('div', { className: 'switchboard-item-head' }, el('div', {}, el('strong', { text: label(item) }), el('small', { text: `${String(item.chatType || 'chat')}${topic(item)} · ${String(item.chatId || 'unknown ID')}` })), el('span', { className: 'switchboard-item-meta', text: `${item.enabled === false ? 'Disabled' : 'Enabled'}${item.inheritedAgent ? ' · Uses assigned goblin' : ''}` })), el('div', { className: 'switchboard-item-controls switchboard-mapping-controls' }, select, el('label', { className: 'switchboard-toggle' }, enabled, el('span', {}, el('strong', { text: 'Enabled' }), el('small', { text: 'Pause routing without deleting' }))), save, remove)));
-    }
-    const discord = state.transportType === 'discord';
-    panel.replaceChildren(...heading('Chat mappings', `Route approved ${transportName(state.transportType)} chats for the selected bot to one enabled Burrow agent.`), connectionBar(), el('p', { className: 'switchboard-settings-note', text: discord ? 'DMs route every approved message. Each channel or thread shares context among its approved bots; mentions and replies trigger the bot.' : 'Direct chats route every message. Group approval includes topics; room overrides take precedence.' }), ...(feedbackNode() ? [feedbackNode()] : []), list);
-  }
-  function renderBots() {
-    renderConfiguration();
-    const configuration = [...panel.children];
-    const state = connection();
-    if (!state) return;
-    renderPending();
-    const pending = panel.children[panel.children.length - 1];
-    renderMappings();
-    const mappings = panel.children[panel.children.length - 1];
-    const access = el('section', { className: 'switchboard-fields' }, el('h3', { text: state.transportType === 'discord' ? 'Server access' : 'Chat access' }));
-    if (!state.agentId) access.append(el('p', { className: 'switchboard-warning', text: 'Assign a goblin before approving access.' }));
-    if (state.transportType === 'discord') {
-      for (const server of [...state.servers, ...state.pendingServers.filter(item => !state.servers.some(saved => saved.guildId === item.guildId))]) {
-        const approved = state.servers.some(item => item.guildId === server.guildId);
-        const toggle = el('button', { type: 'button', className: 'primary', text: !approved ? 'Approve server' : server.enabled === false ? 'Enable server' : 'Pause server' });
-        toggle.disabled = busy || !state.agentId;
-        const path = `/connections/${encodeURIComponent(state.id)}/servers/${encodeURIComponent(server.guildId)}`;
-        toggle.addEventListener('click', () => void mutate(path, { method: 'PUT', body: JSON.stringify({ enabled: !approved || server.enabled === false }) }, 'Server access saved.'));
-        const row = el('article', { className: 'switchboard-item switchboard-item-head' }, el('div', {}, el('strong', { text: server.name || server.guildId }), el('small', { text: !approved ? 'Awaiting approval' : server.enabled === false ? 'Paused' : 'Approved' })), toggle);
-        if (approved) { const revoke = el('button', { type: 'button', className: 'danger', text: 'Revoke' }); revoke.disabled = busy; revoke.addEventListener('click', () => { if (confirm(`Revoke access to “${server.name || server.guildId}”?`)) void mutate(path, { method: 'DELETE' }, 'Server access revoked.'); }); row.append(revoke); }
-        access.append(row);
-      }
-      if (!state.servers.length && !state.pendingServers.length) access.append(el('p', { className: 'switchboard-empty', text: 'Invite the bot to a server to approve it here.' }));
-    }
-    access.append(pending);
-    const rooms = el('div', { className: 'switchboard-list' });
-    if (state.transportType === 'telegram') {
-      [...mappings.children].forEach((row, index) => { const item = state.mappings[index]; if (item && item.topicId == null) access.append(row); else rooms.append(row); });
-    } else rooms.append(mappings);
-    const overrides = el('details', { className: 'switchboard-fields' }, el('summary', { text: 'Room overrides' }), rooms);
-    // Keep credentials and destructive actions secondary to day-to-day access.
-    const destructive = el('details', {}, el('summary', { text: 'Remove or clear bot' }), ...configuration.filter(node => node.className === 'switchboard-destructive'));
-    panel.replaceChildren(...configuration.filter(node => node.className !== 'switchboard-destructive'), access, overrides, destructive);
-  }
-  function renderNoConnections(title) { panel.replaceChildren(...heading(title, 'No bot connections are configured.'), el('p', { className: 'switchboard-empty', text: 'Open Bots to add a bot connection.' })); }
   function render() {
     if (!mounted) return;
-    if (loading && !aggregate) { panel.replaceChildren(...heading('Switchboard', 'Loading bot connections and chat routing…'), el('p', { className: 'switchboard-empty', role: 'status', text: 'Loading…' })); return; }
-    if (failed && !aggregate) { const retry = el('button', { type: 'button', text: 'Retry' }); retry.addEventListener('click', () => void load()); panel.replaceChildren(...heading('Switchboard', 'Configuration is unavailable.'), feedbackNode(), retry); return; }
-    if (section === 'diagnostics') renderStatus(); else renderBots();
+    saveControl = dirtyControl = currentForm = null;
+    if (!aggregate) { panel.replaceChildren(el('h2', { text: 'Bots' }), ...(failed ? [feedbackNode(), button('Retry', () => void load())] : [el('p', { className: 'settings-empty', role: 'status', text: 'Loading bots…' })])); publish(); return; }
+    const focused = document.activeElement?.getAttribute?.('data-focus');
+    if (section === 'bots') renderEditor(); else renderStatus();
+    renderInventory();
+    if (!overflow) panel.append(el('details', { className: 'memory-saved saved-accordion' }, el('summary', { text: 'Saved bots' }), inventory));
+    publish(); if (focused) focus(focused);
   }
-  void load();
-  return () => { mounted = false; controller.abort(); panel.remove(); style.remove(); };
+  const timer = setInterval(() => { if (mounted && !busy && !loading && !document.hidden && !interacting()) void load({ quiet: true }); }, 10_000);
+  timer.unref?.();
+  void load({ initial: true });
+  return () => { mounted = false; controller.abort(); clearInterval(timer); setDraft(null); editor = null; pendingAgents.clear(); panel.remove(); inventory.remove(); };
 }

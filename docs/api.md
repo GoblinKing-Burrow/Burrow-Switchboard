@@ -14,12 +14,12 @@ All mutations return the full aggregate public state. Use connection IDs from `c
 | `DELETE /connections/:connectionId/servers/:guildId` | None | Revoke server inheritance; explicit room overrides remain |
 | `POST /connections/:connectionId/token/clear` | None | Clear this credential, disable polling/gateway, preserve binding/state |
 | `DELETE /connections/:connectionId` | None | Stop and delete this connection's credential/state, not Core conversations |
-| `POST /connections/:connectionId/pending/:id/approve` | `{ "agentId": "<agent>" }` | Approve this bot's pending route; `{}` uses its assigned goblin (Telegram inheritance; Discord legacy approval is explicit) |
+| `POST /connections/:connectionId/pending/:id/approve` | `{ "agentId": "<agent>" }` | Approve this bot's pending route; `{}` uses its assigned goblin (default-responder inheritance on both transports) |
 | `POST /connections/:connectionId/pending/:id/deny` | None | Deny this bot's current request |
-| `PUT /connections/:connectionId/mappings/:id` | `{ "agentId": "<agent>", "enabled": true }` | Update this bot's mapping |
+| `PUT /connections/:connectionId/mappings/:id` | `{ "agentId": "<agent>", "enabled": true }` | Update this bot's mapping; `enabled` required, `agentId` optional/nullable |
 | `DELETE /connections/:connectionId/mappings/:id` | None | Delete this bot's mapping; later text may request admission again |
 
-`agentId` is an optional nullable connection default: omitted on creation means unassigned, omitted on update preserves it, and null clears it. Explicit assignments must name enabled agents. Existing explicit room mappings remain unchanged. Telegram approvals with `{}` inherit later assignment changes; explicit `agentId` overrides them. Discord server grants need an assigned enabled agent and a guild observed by the gateway; the caller cannot grant an arbitrary unseen guild. Server IDs remain strings.
+`agentId` is an optional nullable connection default: omitted on creation means unassigned, omitted on update preserves it, and null clears it. Explicit assignments must name enabled agents. Existing explicit room mappings remain unchanged. Approvals with `{}` inherit later assignment changes; explicit `agentId` overrides them. Discord server grants need an assigned enabled agent and a guild observed by the gateway; the caller cannot grant an arbitrary unseen guild. Server IDs remain strings.
 
 Names must be nonblank strings up to 80 characters. Unknown properties are rejected. Errors include 400 `connection_invalid`, `connection_transport_invalid`, `connection_name_invalid`, provider-specific `telegram_`/`discord_` token validation, auth, rate limit and response errors; 404 `connection_not_found`; 409 `<provider>_bot_already_connected`, `<provider>_bot_changed_add_connection`. The latter means add the different bot as another connection rather than carrying old routes onto it.
 
@@ -38,7 +38,7 @@ Names must be nonblank strings up to 80 characters. Unknown properties are rejec
 
 Use IDs returned in public state; do not derive them from a displayed chat title. The legacy routes target only the default Telegram connection. `DELETE /mappings/:id` also deletes only its mapping. There is no retry-delivery, reset-state or transport-switch endpoint.
 
-Configuration requires a boolean `enabled`; omit `token` to preserve the secret. A supplied token must be a nonempty string, at most 4,096 characters, and is trimmed. Approval/mapping agent IDs must be nonempty strings at most 96 characters. Configuration, approval and mapping bodies reject unknown keys, arrays and non-object values. Mapping updates require both fields and validate the agent even if disabling.
+Configuration requires a boolean `enabled`; omit `token` to preserve the secret. A supplied token must be a nonempty string, at most 4,096 characters, and is trimmed. Explicit approval/mapping agent IDs must be nonempty strings at most 96 characters. Configuration, approval and mapping bodies reject unknown keys, arrays and non-object values. Mapping updates require boolean `enabled`. Omit `agentId` to preserve assignment and responder inheritance (including when pausing an unavailable responder); `agentId: null` restores the validated current connection default; an explicit ID selects a validated enabled agent. Restoring the default rejects if it is absent or unavailable. These operations do not change the mapping's independent versus parent-server access scope.
 
 ## Success and state
 
@@ -49,10 +49,10 @@ Every successful route returns HTTP 200 with `{ "ok": true, ...state }` and `Cac
 - Telegram group requests use the root group identity; inherited topics keep distinct runtime sessions and shared-history rooms.
 - `bot`: configured indicator and, when known, `id`, `username`, `displayName`.
 - `transport`: enabled, health, polling, lastPollAt, error; Discord additionally identifies gateway state. The legacy `polling`/`lastPollAt` field names are also used for gateway activity.
-- `coreAgentTurns`: available and, when unavailable, reason.
-- `mappings`: saved route fields plus resolved `agentName`.
+- `coreAgentTurns`: available and, when unavailable, reason. This checks submit/read only, not image-input support or selected-model vision capability.
+- `mappings`: saved route fields plus resolved `agentName`. `inheritedAgent` identifies default-responder inheritance. On legacy Discord generated routes, omitted `inheritedAgent` falls back to `inherited`. Discord `inherited` separately means server-grant-dependent access; changing responders preserves this scope. A default-following DM never requires a guild grant, and clearing its default pauses delivery without creating invalid submissions.
 - `pending`: chat/topic/requester (Telegram) or DM/channel/thread/requester (Discord) admission records.
-- `deliveries`: recent records plus resolved `agentName`.
+- `deliveries`: recent records plus resolved `agentName` and sanitized per-record `error` when applicable. Frozen `submission` bodies, image bytes, captions and token-bearing download URLs are omitted. The Settings delivery list shows status; inspect this response for the detailed per-record error.
 
 The token and internal Telegram offset or Discord gateway session state are not returned. Treat requester details and delivery metadata as operator data, not public telemetry.
 
@@ -69,4 +69,5 @@ Errors return `{ "ok": false, "error": "<code>" }` with no-store headers. Known 
 | 500 | Sanitized `switchboard_request_failed` |
 
 Validation order can affect which error is returned; for example approval validates the selected agent before looking up the pending ID. Do not depend on an error as a route-existence probe.
+
 

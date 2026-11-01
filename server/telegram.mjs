@@ -568,16 +568,17 @@ export function createTelegramConnection({ context, connectionId = 'default', fe
     return publicState();
   }
   async function updateMapping(id, input) {
-    const value = exactObject(input, ['agentId', 'enabled'], 'mapping_invalid'); const agentId = boundedString(value.agentId, 96, 'mapping_invalid');
+    const value = exactObject(input, ['agentId', 'enabled'], 'mapping_invalid');
     if (typeof value.enabled !== 'boolean') throw Object.assign(new Error('mapping_invalid'), { statusCode: 400 });
-    await validateAgent(agentId);
     const approved = await mappings(); const index = approved.findIndex(item => item.id === id);
     if (index < 0) throw Object.assign(new Error('mapping_not_found'), { statusCode: 404 });
     const changed = approved[index];
+    const agentId = value.agentId === undefined ? changed.agentId : boundedString(value.agentId === null ? (await configuration()).agentId : value.agentId, 96, 'mapping_invalid');
+    if (value.agentId !== undefined) await validateAgent(agentId);
     if (!value.enabled || changed.agentId !== agentId) {
       await write('deliveries', (await deliveries()).map(item => item.direction === 'inbound' && mappingAffectsItem(changed, item, approved) && needsInterruption(item) ? { ...item, submission: null, status: 'interrupted', error: 'mapping_changed' } : item));
     }
-    approved[index] = { ...approved[index], inheritedAgent: false, agentId, enabled: value.enabled, updatedAt: nowIso(clock) };
+    approved[index] = { ...approved[index], ...(value.agentId === undefined ? {} : { inheritedAgent: value.agentId === null }), agentId, enabled: value.enabled, updatedAt: nowIso(clock) };
     await write('mappings', approved); return publicState();
   }
   async function deleteMapping(id) {

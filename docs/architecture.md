@@ -45,7 +45,7 @@ Both transports submit `displayMessage` separately from the attributed, context-
 
 Image turns require a Core version supporting external-turn attachments and a selected model configured to accept images; the submit/read availability indicator alone does not prove either. Core persists the attachment in its own agent artifact lifecycle and forwards image input to compatible models. Switchboard checks supported image signatures, limits the Telegram download to 20 MiB (within Core's 30,000,000-character data-URL limit), rejects redirects and never persists or sends the token-bearing download URL as model input. Captions and bytes are not public delivery diagnostics.
 
-If submit/read are absent, valid routed input is recorded as failed with `core_external_agent_turns_unavailable`. Approval itself does not establish that Core turns are available.
+If submit/read are absent on a new input, valid routed input is recorded as failed with `core_external_agent_turns_unavailable`. An already frozen, uncertain submission instead remains pending under its original idempotency key until Core is available; its bytes are not discarded and the polling offset does not advance past it. Approval itself does not establish that Core turns are available.
 
 ### Additional Discord command capabilities
 
@@ -111,5 +111,6 @@ agent, so no automatic bot-to-bot wake loop is introduced.
 
 ## Inherited access
 
-Telegram approvals can inherit connection assignment (`inheritedAgent`); group-root access covers topics without merging their sessions or context. Explicit topic mappings win. Discord `servers` and gateway-owned `observed-guilds` persist per connection; generated `inherited` routes use the assigned agent and remain isolated per channel/thread. Revocation fences inherited replies, not independent explicit room grants. Operator settings combine bot identity, credential, assignment and access in Bots, with Diagnostics separate.
+Telegram approvals can inherit connection assignment (`inheritedAgent`); group-root access covers topics without merging their sessions or context. Explicit topic mappings win. Discord `servers` and gateway-owned `observed-guilds` persist per connection; generated `inherited` routes remain server-grant-dependent and isolated per channel/thread. Responder inheritance is separate: `inheritedAgent` (falling back to legacy `inherited`) follows the connection default; a custom responder does not bypass a generated route's server fence. Independently authorized DMs/legacy rooms remain independent even when using the default responder. Revocation fences server-dependent replies, not independent room grants. Operator settings combine bot identity, credential, assignment and access in Bots, with Diagnostics separate.
+
 

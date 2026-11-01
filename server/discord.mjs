@@ -259,10 +259,10 @@ export function createDiscordConnection(options = {}) {
     return snowflake(guildId) && !blockedGuilds.has(guildId) && (await servers()).some(item => item.guildId === guildId && item.enabled === true) && !blockedGuilds.has(guildId);
   }
   async function routeEnabled(route) {
-    if (!route || route.enabled === false || blocked.has(route.id)) return false;
+    if (!route || !route.agentId || route.enabled === false || blocked.has(route.id)) return false;
     if (!route.inherited) return true;
     const configuration = await config();
-    return Boolean(configuration.agentId) && route.agentId === configuration.agentId && await serverEnabled(route.guildId);
+    return (!(route.inheritedAgent ?? route.inherited) || (Boolean(configuration.agentId) && route.agentId === configuration.agentId)) && await serverEnabled(route.guildId);
   }
   async function mappingFor(item) {
     const route = (await mappings()).find(mapping => (mapping.channelId || mapping.chatId) === item.channelId && (mapping.guildId || null) === (item.guildId || null) && mapping.agentId === item.agentId);
@@ -694,8 +694,8 @@ export function createDiscordConnection(options = {}) {
     }
     if (agentId !== previous.agentId) {
       const routes = await mappings();
-      for (const route of routes.filter(item => item.inherited)) await interruptRoute(route, 'agent_changed');
-      await put('mappings', routes.map(route => route.inherited ? { ...route, agentId, sessionId: null, updatedAt: stamp(clock) } : route));
+      for (const route of routes.filter(item => item.inheritedAgent ?? item.inherited)) await interruptRoute(route, 'agent_changed');
+      await put('mappings', routes.map(route => (route.inheritedAgent ?? route.inherited) ? { ...route, agentId, sessionId: null, updatedAt: stamp(clock) } : route));
     }
     await put('configuration', { enabled: value.enabled, agentId });
     await state({ ...(bot ? { bot, boundBotId: bot.id } : {}), health: value.enabled ? 'unknown' : 'stopped', polling: value.enabled ? 'starting' : 'stopped', gateway: value.enabled ? 'starting' : 'stopped', error: null });
@@ -737,7 +737,7 @@ export function createDiscordConnection(options = {}) {
     const requests = await pending(); const request = requests.find(item => item.id === id); if (!request) fail('pending_admission_not_found', 404);
     const routes = await mappings(); if (routes.length >= 250 && !routes.some(item => item.id === id)) fail('mapping_limit_reached', 409);
     const { requester: _requester, requestedAt: _requestedAt, ...route } = request;
-    await put('mappings', [{ ...route, agentId, inherited: false, enabled: true, approvedAt: stamp(clock) }, ...routes.filter(item => item.id !== id)]);
+    await put('mappings', [{ ...route, agentId, inherited: false, inheritedAgent: value.agentId == null, enabled: true, approvedAt: stamp(clock) }, ...routes.filter(item => item.id !== id)]);
     await put('pending-admissions', requests.filter(item => item.id !== id)); blocked.delete(id); return publicState();
   }
   async function deny(id) {
@@ -745,10 +745,13 @@ export function createDiscordConnection(options = {}) {
     await put('pending-admissions', requests.filter(item => item.id !== id)); return publicState();
   }
   async function updateMapping(id, input) {
-    const value = object(input, ['agentId', 'enabled'], 'mapping_invalid'); const agentId = text(value.agentId, 96, 'mapping_invalid');
-    if (typeof value.enabled !== 'boolean') fail('mapping_invalid'); await validateAgent(agentId);
+    const value = object(input, ['agentId', 'enabled'], 'mapping_invalid');
+    if (typeof value.enabled !== 'boolean') fail('mapping_invalid');
     const routes = await mappings(); const index = routes.findIndex(item => item.id === id); if (index < 0) fail('mapping_not_found', 404);
-    const old = routes[index]; routes[index] = { ...old, ...(old.agentId !== agentId ? { sessionId: null } : {}), agentId, inherited: false, enabled: value.enabled, updatedAt: stamp(clock) };
+    const old = routes[index];
+    const agentId = value.agentId === undefined ? old.agentId : text(value.agentId === null ? (await config()).agentId : value.agentId, 96, 'mapping_invalid');
+    if (value.agentId !== undefined) await validateAgent(agentId);
+    routes[index] = { ...old, ...(old.agentId !== agentId ? { sessionId: null } : {}), agentId, ...(value.agentId === undefined ? {} : { inheritedAgent: value.agentId === null }), enabled: value.enabled, updatedAt: stamp(clock) };
     await put('mappings', routes);
     if (!value.enabled || old.agentId !== agentId) await interruptRoute(old, 'mapping_changed');
     blocked.delete(id); return publicState();

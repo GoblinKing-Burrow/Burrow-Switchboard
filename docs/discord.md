@@ -10,9 +10,9 @@ Switchboard connects outward to Discord's Gateway (WebSocket) and REST API; it d
 
 ## First server or DM
 
-1. In **Settings → Switchboard → Bots**, add a Discord connection, enter its write-only token, assign its goblin and enable the gateway. Check bot identity, transport and Core state there or in **Diagnostics**.
-2. Once the gateway observes the server (guild), it appears in **Server access**. Approve the server once for this bot. Visible channels and threads now inherit access without per-channel approval. Discord permission overwrites and private-thread membership still apply.
-3. Send a fresh human mention or reply to the bot in a channel. Each channel/thread has an isolated session and room context. DMs remain individually admitted on the same Bots page; explicit/legacy channel overrides remain supported under collapsed **Room overrides**.
+1. In **Settings → Switchboard → Bots**, choose **Add bot → Discord**, enter its name and token, choose who answers new chats, and leave **Receive messages** on. Check the selected bot's connection status or detailed **Diagnostics**.
+2. Once the gateway observes the server (guild), it appears in **Servers**. Use **Allow server** once for this bot. Visible channels and threads now inherit access without per-channel approval. Discord permission overwrites and private-thread membership still apply.
+3. Send a fresh human mention or reply to the bot in a channel. Each channel/thread has an isolated session and room context. DMs remain individually admitted on the same Bots page; explicit/legacy channel overrides remain supported under collapsed **Channel and thread exceptions**.
 4. Pause/revoke server access to stop inherited routes. Explicit room grants remain independent; disable/remove those separately when needed. Rejected server mutations do not revoke valid in-flight replies.
 
 ## Two-bot acceptance checklist (operator-run, not a live verification claim)

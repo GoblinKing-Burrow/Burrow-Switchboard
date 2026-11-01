@@ -510,3 +510,75 @@ test('DM participant can create a session; status reports Core state and reset s
   assert.doesNotMatch(JSON.stringify(context), /pre-reset secret/);
   assert.match(JSON.stringify([...settings.data]), /pre-reset secret/);
 });
+
+test('mapping edits preserve omitted assignment and null restores validated default inheritance', async t => {
+  const f = fixture(); t.after(() => f.service.close());
+  f.context.agents.list = async () => [{ id: 'hatchet', enabled: true }, { id: 'smatchet', enabled: true }, { id: 'off', enabled: false }];
+  f.settings.data.set('configuration', { enabled: true, agentId: 'smatchet' });
+  const request = await admit(f);
+  const route = () => f.settings.data.get('mappings')[0];
+  const edit = body => f.service.updateMapping(request.id, body);
+  await edit({ enabled: false });
+  assert.equal(route().agentId, 'hatchet'); assert.equal(route().inherited, false);
+  await edit({ enabled: true, agentId: null });
+  assert.equal(route().agentId, 'smatchet'); assert.equal(route().inheritedAgent, true);
+  await edit({ enabled: false });
+  assert.equal(route().agentId, 'smatchet'); assert.equal(route().inheritedAgent, true);
+  await edit({ enabled: true, agentId: 'hatchet' });
+  assert.equal(route().agentId, 'hatchet'); assert.equal(route().inherited, false);
+  for (const body of [{ agentId: null }, { enabled: 'true' }, { enabled: true, agentId: 'off' }, { enabled: true, agentId: 'missing' }]) {
+    const before = structuredClone([...f.settings.data]);
+    await assert.rejects(edit(body)); assert.deepEqual([...f.settings.data], before);
+  }
+  for (const agentId of [null, 'missing', 'off']) {
+    f.settings.data.set('configuration', { enabled: false, agentId });
+    const before = structuredClone([...f.settings.data]);
+    await assert.rejects(edit({ enabled: true, agentId: null }));
+    assert.deepEqual([...f.settings.data], before);
+  }
+});
+
+test('DM default responder inheritance never requires a server grant', async t => {
+  const f = fixture({ fetchImpl: async () => response({ id: CHANNEL, type: 1 }) });
+  t.after(() => f.service.close());
+  f.settings.data.set('configuration', { enabled: true, agentId: 'hatchet' });
+  const request = await admit(f, message('523456789012345678', { guild_id: undefined }));
+  await f.service.updateMapping(request.id, { enabled: true, agentId: null });
+  const route = f.settings.data.get('mappings')[0];
+  assert.equal(route.inherited, false); assert.equal(route.inheritedAgent, true);
+  await f.service.processMessage(message('523456789012345679', { guild_id: undefined }), BOT);
+  assert.equal(f.submissions.length, 1);
+  assert.equal(f.submissions[0].agentId, 'hatchet');
+});
+
+test('cleared default fences independent DMs before admission without starving explicit DMs', async t => {
+  const f = fixture({ fetchImpl: async () => response({ id: CHANNEL, type: 1 }) });
+  t.after(() => f.service.close());
+  await f.service.configure({ enabled: true, agentId: 'hatchet' });
+  const request = await admit(f, message('523456789012345678', { guild_id: undefined }));
+  await f.service.updateMapping(request.id, { enabled: true, agentId: null });
+  const explicitChannel = '223456789012345679';
+  await admit(f, message('523456789012345679', { guild_id: undefined, channel_id: explicitChannel }));
+  await f.service.configure({ enabled: true, agentId: null });
+  const before = structuredClone(f.settings.data.get('deliveries') || []);
+  for (let i = 0; i < 200; i++) {
+    await f.service.processMessage(message(String(623456789012345678n + BigInt(i)), { guild_id: undefined }), BOT);
+  }
+  const api = interactionApi();
+  const sessions = sessionApi(f);
+  for (const name of ['new', 'model', 'status', 'stop']) {
+    await f.service.processInteraction(interaction(String(723456789012345678n + BigInt(name.length)), name, { guild_id: undefined, member: undefined, user: USER }), BOT, api);
+  }
+  await f.service.reconcile(f.api);
+  assert.equal(sessions.creates(), 0);
+  assert.equal(f.submissions.length, 0);
+  assert.deepEqual(f.settings.data.get('deliveries') || [], before);
+  await f.service.processMessage(message('823456789012345678', { guild_id: undefined, channel_id: explicitChannel }), BOT);
+  assert.equal(f.submissions.length, 1);
+  assert.equal(f.submissions[0].agentId, 'hatchet');
+  await f.service.configure({ enabled: true, agentId: 'hatchet' });
+  await f.service.processMessage(message('823456789012345679', { guild_id: undefined }), BOT);
+  assert.equal(f.submissions.length, 2);
+  assert.equal(f.submissions[1].agentId, 'hatchet');
+  assert.equal(f.settings.data.get('mappings').find(route => route.id === request.id).agentId, 'hatchet');
+});
