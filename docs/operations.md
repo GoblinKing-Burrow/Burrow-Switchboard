@@ -12,7 +12,7 @@ Telegram answers are sent without a parse mode. Discord sends message content wi
 
 ## Multiple connections
 
-Select the intended bot on **Bots** or **Diagnostics**. Each worker has an independent Telegram cursor or Discord gateway session, credential, admissions and bounded delivery history. A failing or paused bot does not stop the other pollers. Token replacement is restricted to the same bot; add another connection for a different bot. Duplicate bots are rejected even when another connection is disabled or its credential was cleared, until that connection is removed.
+Select the intended bot in **Settings → Switchboard → Bots** for configuration or **Archive → Mods → Switchboard** for diagnostics. Each worker has an independent Telegram cursor or Discord gateway session, credential, admissions and bounded delivery history. A failing or paused bot does not stop the other pollers. Token replacement is restricted to the same bot; add another connection for a different bot. Duplicate bots are rejected even when another connection is disabled or its credential was cleared, until that connection is removed.
 
 ## Telegram polling and Discord gateway behavior
 
@@ -34,7 +34,7 @@ For Discord, check each bot's Message Content intent, View Channels, Send Messag
 
 | Symptom | Check and action |
 | --- | --- |
-| No pending request | Correct bot identity and healthy polling/gateway; check actual text sent to exact route, Telegram privacy or Discord intent/permissions and private-thread membership; revisit Settings to refresh |
+| No pending request | Correct bot identity and healthy polling/gateway; check actual text sent to exact route, Telegram privacy or Discord intent/permissions and private-thread membership; use **Refresh** in Settings; idle visible pages also refresh automatically when no edit/dialog is active |
 | Approved, but no reply | Send a **new** message; check mapping enabled and selected agent; Telegram groups broadcast when no known bot is targeted; Discord guild channels/threads require a human mention/reply. Check inherited assignment and parent access as well as explicit overrides |
 | Core unavailable warning | Host lacks external-turn submit/read; use a compatible Core before retrying a harmless fresh message |
 | `telegram_token_missing` | Configure a token or disable polling |
@@ -64,7 +64,7 @@ Include installed mod/Core versions, redacted transport health/error, relevant c
 
 ## Telegram images
 
-Use a compatible Core with external-turn attachments and choose a model that accepts image input. Telegram sends its ordinary photo variants or an image document; Switchboard selects a practical variant, checks downloaded byte signatures and applies a 20 MiB maximum. Image-only input is supported. The initial admission image is not replayed: send another after approval. Failed download, unsupported type or oversize produces a failed inbound delivery and **does not** submit the caption without its image; inspect the redacted `error` in the mod-local bootstrap/configuration response (the Settings list shows status). No provider URL, token or bytes are included in public diagnostics.
+Use a compatible Core with external-turn attachments and choose a model that accepts image input. Telegram sends its ordinary photo variants or an image document; Switchboard selects a practical variant, checks downloaded byte signatures and applies a 20 MiB maximum. Image-only input is supported. The initial admission image is not replayed: send another after approval. Failed download, unsupported type or oversize produces a failed inbound delivery and **does not** submit the caption without its image; inspect the redacted `error` in the mod-local bootstrap/configuration response (the Archive diagnostics list shows status). No provider URL, token or bytes are included in public diagnostics.
 
 Pending uncertain Core submissions temporarily retain their exact image bytes and caption in private mod settings for replay; after Core accepts, the frozen copy is cleared. Core retains accepted image artifacts under its own policies. Room context stores only caption/marker text, not images. Disabling a connection aborts an in-flight download; deleting/changing its mapping interrupts pending work but cannot recall an already accepted Core turn. Discord image input, generated images and outbound image replies remain unsupported.
 
@@ -73,4 +73,5 @@ Pending uncertain Core submissions temporarily retain their exact image bytes an
 A first-attempt rejection known to occur before Core admission is terminal for that update: The delivery record contains a sanitized error (available in the mod-local bootstrap/configuration response), and polling continues to later text instead of wedging the bot. `core_image_attachments_unavailable` means Core rejected an image input with its generic input-invalid code; upgrade Core first, but this code alone does not prove a missing feature. Other codes are `core_turn_input_invalid`, `core_image_attachment_too_large`, `core_agent_not_found`, and `core_agent_disabled`.
 
 A lost acceptance response is different: exact frozen input stays pending under the original key, including during temporary Core-capability outages. Disabling/removing or reassigning its mapping interrupts frozen work and clears its stored bytes, even if an older record mislabeled it terminal. This cannot recall a Core turn already accepted. No automatic new-key retry is used for uncertain acceptance.
+
 

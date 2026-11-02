@@ -27,9 +27,7 @@ Regression cases include unchanged-poll handler identity, delayed refresh focus 
 
 ## Real production-host browser evidence
 
-Evidence root on Hatchet:
-
-`/home/burrow/.cache/hatchet-evidence/switchboard-contract-20261031`
+Browser evidence was retained in the operator’s private acceptance archive; its deployment-specific filesystem location is intentionally omitted from public documentation.
 
 The final `report.json` and `acceptance-final-65f394-rerun.log` record **29/29 passed** with terminal exit 0, **98 screenshots**, zero browser exceptions/console errors/native dialogs, and eight deliberately injected HTTP 503s matching the expected failures. The actual production Burrow-UI `dist` serves the actual current Switchboard module, not an HTML approximation; source and browser-loaded module hashes match above. The report includes production asset hashes and per-scenario request evidence. Earlier unsuccessful fixture/harness attempts are retained separately and are not final acceptance.
 
@@ -52,3 +50,4 @@ These APIs are entirely synthetic/in-memory, so this does not validate real Tele
 This is **not** a whole-shell responsive redesign. The host already scrolls columns horizontally at phone width. Parent inspection also observed an existing 800px shell-level category/footer overlap in both MCP and Switchboard; matching the baseline does not claim that defect is fixed. The changed module’s own fields wrap and content remains scrollable, but this acceptance does not certify all narrow-shell usability. No theme-colored selection redesign was introduced to mask the baseline limitation.
 
 Both repositories require coordinated source delivery: the mod feature-detects `confirm`, `navigate`, and `setDraft` and displays an honest compatibility message on older hosts. Source is committed/pushed separately from releases or installation. Normal main-branch CI creates assemblies/development releases, so source-only delivery uses the existing `[skip ci]` convention. No deployment, version bump or tag is part of this correction.
+

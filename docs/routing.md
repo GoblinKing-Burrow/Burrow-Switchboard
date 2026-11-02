@@ -10,7 +10,7 @@ Routing is scoped to a bot connection. Displayed room names are descriptive meta
 
 A nonempty text message or image from an unknown Telegram DM/group, or a nonempty text message from a Discord DM/channel/thread can create or refresh a pending route entry when no inherited access applies. No Core turn is submitted. Pending admissions are bounded to 100 entries and are not a permanent request archive. Discord guild observation is separate: an observed but unauthorized guild appears as a pending server, not as proof that every channel is reachable.
 
-**Approve** requires an existing enabled agent. An empty approval body (`{}`) uses the connection's assigned goblin; Telegram records this as inheritance, while a Discord legacy room approval remains an explicit room grant. Supplying `agentId` makes an explicit room choice. If the connection has no assignment, `{}` cannot approve a route. The triggering message is not replayed, so send a new message after approval.
+**Approve** requires an existing enabled agent. An empty approval body (`{}`) uses the connection's assigned goblin; Telegram records this as inheritance, while a Discord legacy room approval remains an independent room access grant; both transports follow the connection's default responder when `agentId` is omitted. Supplying `agentId` makes an explicit room choice. If the connection has no assignment, `{}` cannot approve a route. The triggering message is not replayed, so send a new message after approval.
 
 **Deny** removes the current request. It is **not a permanent ban**; later eligible input from an unknown route can create another request.
 
@@ -75,4 +75,5 @@ Only approved, enabled routes contribute inbound history. Disabling/deleting acc
 Discord independently persists bounded history per guild+channel across approved bots; a thread ID is its own room. DMs are connection-isolated. On authorized or explicitly approved guild routes, human text and observed bot/webhook text can be context while only a human mention/reply starts a turn. Discord uses the same 100-room, 50-message, 4,000-UTF-16-unit, 512,000-byte total and 16,000-byte submission-context limits.
 
 Only text/markers are shared in room history, not image bytes or file URLs. The complete submission, including the downloaded image bytes and caption, is frozen in private settings before Core submission so an uncertain submission can replay the same input after restart even if room history changes. These pending inputs are internal state and omitted from public delivery diagnostics. The 200-record connection limit still bounds recovery.
+
 

@@ -1,4 +1,4 @@
-export const settingsSections = Object.freeze([{ id: 'bots', label: 'Bots' }, { id: 'diagnostics', label: 'Diagnostics' }]);
+export const settingsSections = Object.freeze([{ id: 'bots', label: 'Bots' }]);
 
 let selectedConnectionId = 'default';
 const DEFAULT_AGENT = '__bot_default__';
@@ -49,9 +49,9 @@ function request(api, controller, path, init = {}) { return api(path, { ...init,
 // Presentation is the host's Settings API, not a second design system. See
 // Burrow-UI/docs/MOD_SETTINGS_UI_API.md and Connections → MCP servers.
 export function mountSettings({ section, primary, overflow = null, agents = [], api, confirm, navigate, setDraft }) {
-  if (['status', 'configuration', 'pending-admissions', 'chat-mappings'].includes(section)) section = section === 'status' ? 'diagnostics' : 'bots';
+  if (['status', 'configuration', 'pending-admissions', 'chat-mappings'].includes(section)) section = 'bots';
   if (!settingsSections.some(item => item.id === section)) return;
-  const panel = el('section', { className: 'setting-section', 'aria-label': section === 'bots' ? 'Switchboard bots' : 'Switchboard diagnostics' });
+  const panel = el('section', { className: 'setting-section', 'aria-label': 'Switchboard bots' });
   const inventory = el('div', { className: overflow ? 'settings-overflow-content memory-saved' : '', 'aria-label': 'Your bots' });
   primary.replace(panel);
   if (![confirm, navigate, setDraft].every(value => typeof value === 'function')) {
@@ -361,6 +361,7 @@ export function mountSettings({ section, primary, overflow = null, agents = [], 
     panel.replaceChildren(el('h2', { tabindex: '-1', 'data-focus': 'editor-heading', text: editor.kind === 'new' ? 'Add bot' : state.name }), renderBotForm(state));
     if (state) {
       if (state.agentId && !enabledAgent(state.agentId)) panel.append(el('p', { className: 'settings-request-error', role: 'alert', text: `${agentName(state.agentId)} is unavailable. Custom chat assignments are unchanged.` }));
+      panel.append(el('p', { className: 'settings-help', text: `Status: ${status(state).text} · ${transportName(state.transportType)} · ${state.transport.health || 'unknown'}` }));
       if (state.transport.error) panel.append(el('p', { className: 'settings-request-error', role: 'alert', text: message(new Error(state.transport.error), 'Connection problem.') }));
       panel.append(...accessSections(state), el('details', { className: 'settings-disclosure' }, el('summary', { text: 'Remove bot or clear token' }), el('div', { className: 'settings-danger-actions' },
         button('Clear saved token', () => destructive(state => ({ title: 'Clear saved token?', message: `Clear the token for “${state.name}”? This stops new messages, but keeps its chats and assignments.`, confirmLabel: 'Clear token', tone: 'danger' }), state => void mutate(`${pathFor(state)}/token/clear`, { method: 'POST' }, 'Token cleared. Chats and assignments kept.', { after: () => { editor = botDraft(connection()); } }), state.id), { className: 'danger', ...(!state.tokenConfigured ? { disabled: 'disabled' } : {}) }),
@@ -378,30 +379,12 @@ export function mountSettings({ section, primary, overflow = null, agents = [], 
     const refresh = button(loading ? 'Refreshing…' : 'Refresh', () => void load(), { 'data-focus': 'refresh' }); refresh.disabled = loading || busy || confirming;
     inventory.replaceChildren(...(!aggregate.connections.length ? [el('p', { className: 'settings-empty', text: 'No bots connected yet.' })] : [list]), el('div', { className: 'settings-row settings-group' }, refresh, ...(section === 'bots' ? [button('Add bot', () => transition(() => { editor = botDraft(); }))] : [])));
   }
-  function renderStatus() {
-    const state = connection();
-    panel.replaceChildren(el('h2', { text: 'Diagnostics' }));
-    if (!state) { panel.append(el('p', { className: 'settings-empty', text: 'Open Bots to add a bot.' })); return; }
-    panel.append(el('p', { className: 'settings-description', text: state.name }));
-    const facts = el('dl', { className: 'settings-facts' });
-    for (const [title, value] of [
-      ['Connection', status(state).text], ['Transport', `${transportName(state.transportType)} · ${state.transport.health || 'unknown'}`],
-      ['Activity', `${state.transport.polling || 'unknown'} · ${date(state.transport.lastPollAt)}`], ['Bot', state.bot.username ? `@${state.bot.username}` : 'Not configured'],
-      ['Burrow', state.core.available ? 'Available' : state.core.reason || 'Unavailable'],
-    ]) facts.append(el('dt', { text: title }), el('dd', { text: value }));
-    panel.append(facts, ...(feedbackNode() ? [feedbackNode()] : []));
-    const list = (title, items, renderItem) => el('section', { className: 'settings-group' }, el('h3', { text: title }), ...items.map(renderItem), ...(!items.length ? [el('p', { className: 'settings-empty', text: 'None recorded.' })] : []));
-    const row = (title, subtitle, state) => el('article', { className: 'settings-group' }, el('strong', { text: title }), el('p', { className: 'settings-help', text: `${subtitle} · ${state}` }));
-    panel.append(list('Approved mappings', state.mappings, item => row(label(item), `${item.chatType || 'chat'}${topic(item)} · ${agentName(item.agentId)}`, item.enabled === false ? 'Paused' : 'Allowed')),
-      list('Pending admissions', state.pending, item => row(label(item), item.chatType || 'chat', date(item.requestedAt))),
-      list('Recent deliveries', state.deliveries, item => row(`${item.direction === 'outbound' ? 'To' : 'From'} ${label(item)}`, `${agentName(item.agentId)} · ${date(item.at || item.createdAt)}`, item.status || 'unknown')));
-  }
   function render() {
     if (!mounted) return;
     saveControl = dirtyControl = currentForm = null;
     if (!aggregate) { panel.replaceChildren(el('h2', { text: 'Bots' }), ...(failed ? [feedbackNode(), button('Retry', () => void load())] : [el('p', { className: 'settings-empty', role: 'status', text: 'Loading bots…' })])); publish(); return; }
     const focused = document.activeElement?.getAttribute?.('data-focus');
-    if (section === 'bots') renderEditor(); else renderStatus();
+    renderEditor();
     renderInventory();
     if (!overflow) panel.append(el('details', { className: 'memory-saved saved-accordion' }, el('summary', { text: 'Saved bots' }), inventory));
     publish(); if (focused) focus(focused);

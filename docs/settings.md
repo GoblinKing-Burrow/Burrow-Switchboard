@@ -1,6 +1,6 @@
 # Settings reference
 
-Switchboard contributes **Bots** and **Diagnostics** under **Settings → Switchboard**. Older `configuration`, `pending-admissions`, and `chat-mappings` links open Bots; `status` opens Diagnostics.
+Switchboard contributes **Bots** under **Settings → Switchboard**. Full diagnostics live in **Archive → Mods → Switchboard**, following Archive’s existing bot list and detail-reader layout. Older `status`, `configuration`, `pending-admissions`, and `chat-mappings` Settings links open Bots.
 
 ## Everyday use
 
@@ -32,7 +32,7 @@ Switching bot, chat, subsection, category or application page uses Burrow’s sh
 
 A direct message requests access individually. A group/topic request represents its **root group**; allowing the group includes its forum topics, with separate topic sessions and history. Send a fresh message after approval; the requesting message is not replayed.
 
-Choose **<goblin> · bot default** to follow the saved default, or an explicit enabled goblin for a chat-specific assignment. Missing defaults do not invalidate working custom assignments. **Topic exceptions** take priority over the root group, including when paused. Removing an exception reveals still-allowed parent access; pause to block a topic instead. Removing a root group does not remove explicit topic exceptions. Telegram privacy mode and permissions still determine which updates reach the bot; see [setup](setup.md).
+Choose **Goblin name · bot default** to follow the saved default, or an explicit enabled goblin for a chat-specific assignment. Missing defaults do not invalidate working custom assignments. **Topic exceptions** take priority over the root group, including when paused. Removing an exception reveals still-allowed parent access; pause to block a topic instead. Removing a root group does not remove explicit topic exceptions. Telegram privacy mode and permissions still determine which updates reach the bot; see [setup](setup.md).
 
 ### Discord servers, channels and direct messages
 
@@ -48,8 +48,11 @@ Failed refreshes retain usable data and expose an error. Older reads cannot over
 
 ## Diagnostics and boundaries
 
-Diagnostics retains scoped transport health/activity, bot identity, Core-turn availability, approved mappings, pending admissions and recent deliveries. It uses compact shared facts/list styling, not metric cards. The supporting bot selector scopes the diagnostic view.
+In **Archive → Mods → Switchboard**, select a bot to inspect transport health/activity, bot identity, Core-turn availability, approved mappings, pending admissions and recent deliveries. The view uses Archive’s existing list/detail reader, not a second settings workspace or metric dashboard. **Refresh** requests a new snapshot, and idle visible views check every 10 seconds. Leaving the pane cancels polling and requests. Bot configuration and compact current connection/status indicators remain in **Settings → Switchboard → Bots**.
 
-Connected describes the transport snapshot, not proof of model execution or end-to-end delivery. Fake-DOM tests verify event wiring and lifecycle; real-browser acceptance uses production host assets and synthetic APIs, not real messaging services. See [acceptance](settings-acceptance.md).
+This is the current bounded Switchboard snapshot, not a complete historical audit store. Archive’s global date filter does not filter this snapshot; moving the view does not change retention, delivery semantics or existing records.
+
+Connected describes the transport snapshot, not proof of model execution or end-to-end delivery. Fake-DOM tests verify event wiring and lifecycle; real-browser acceptance uses production host assets and synthetic APIs, not real messaging services. The repository retains a dated Settings acceptance receipt; those reported checks are separate from this documentation review.
 
 Host authentication policy is preserved, including intentional authentication-disabled configurations. Protect the operator interface with the host’s controls; write-only tokens do not make an exposed settings endpoint safe.
+

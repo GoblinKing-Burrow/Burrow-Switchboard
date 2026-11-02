@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mountSettings, settingsSections } from '../ui/settings.js';
+import { mountArchive } from '../ui/archive.js';
 
 // This is a deliberately small DOM for exercising rendered source and event handlers;
 // it is not a browser, layout, or accessibility-tree acceptance test.
@@ -243,7 +244,7 @@ test.afterEach(() => { delete globalThis.document; delete globalThis.confirm; de
 
 for (const overflow of [false, true]) {
   test(`Primary Add form and compact inventory use shared Settings composition (${overflow ? 'overflow' : 'fallback'})`, async t => {
-    assert.deepEqual(settingsSections.map(item => item.id), ['bots', 'diagnostics']);
+    assert.deepEqual(settingsSections.map(item => item.id), ['bots']);
     const f = setup(t, { overflow }); await settle();
     const panel = named(f.primary, 'section', 'Switchboard bots');
     assert.ok(byClass(panel, 'setting-section').includes(panel));
@@ -370,9 +371,7 @@ test('An explicit empty connections array stays empty even when legacy top-level
   assert.ok(form(f.primary, 'Add bot'));
   assert.equal(byAttr(f.root, 'button', 'aria-label', 'Manage Legacy ghost'), undefined);
   assert.doesNotMatch(f.root.textContent, /@switchboard_bot/);
-  const d = setup(t, { section: 'diagnostics', initial }); await settle();
-  assert.match(d.root.textContent, /Open Bots to add a bot/);
-  assert.equal(byTag(d.root, 'select').length, 0);
+  assert.equal(settingsSections.some(section => section.id === 'diagnostics'), false);
 });
 
 test('Pending approval distinguishes inherited default, explicit agent, and no default', async t => {
@@ -690,36 +689,29 @@ test('Controls have accessible names and selected unavailable agents remain visi
   assert.equal(selectOptionWithText(select, 'Sleepy (unavailable)').disabled, true);
 });
 
-test('Diagnostics are scoped by bot and retain useful legacy data and section aliases', async t => {
-  const f = setup(t, { section: 'diagnostics' }); await settle();
-  await chooseBot(f, 'Alerts');
-  assert.match(f.root.textContent, /@alerts_bot/);
-  assert.match(f.root.textContent, /Alerts Council/);
-  assert.match(f.root.textContent, /Alerts Rob/);
-  assert.match(f.root.textContent, /Recent deliveries/);
-  assert.doesNotMatch(f.root.textContent, /Primary Council/);
-  assert.ok(named(f.root, 'button', 'Manage Alerts'));
+test('Archive diagnostics select bots and retain legacy records without writes', async t => {
+  const root = new FakeNode('div');
+  const calls = [];
+  const fixture = mountArchive({ root, api: async (path, init) => { calls.push({ path, init }); return config(); } });
+  t.after(() => fixture.unmount()); await settle();
+  assert.match(root.textContent, /Primary Council/);
+  await click(named(root, 'button', 'Inspect Alerts'));
+  assert.match(root.textContent, /Alerts Council/);
+  assert.match(root.textContent, /Recent deliveries/);
+  assert.doesNotMatch(root.textContent, /Primary Council/);
+  assert.deepEqual(calls.map(call => call.path), ['/configuration']);
+  assert.ok(calls.every(call => !call.init.method));
   const legacy = connection('default', 'Default bot');
   delete legacy.id; delete legacy.name;
   legacy.botIdentity = legacy.bot; delete legacy.bot;
   legacy.pendingAdmissions = legacy.pending; delete legacy.pending;
   legacy.recentDeliveries = legacy.deliveries; delete legacy.deliveries;
-  const initial = { ...legacy, coreAgentTurns: { available: true } };
-  const d = setup(t, { section: 'status', initial }); await settle();
-  assert.match(d.root.textContent, /Diagnostics/);
-  assert.match(d.root.textContent, /@switchboard_bot/);
-  assert.match(d.root.textContent, /Default bot Council/);
-  assert.match(d.root.textContent, /Default bot Rob/);
-  assert.match(d.root.textContent, /Recent deliveries/);
-  for (const section of ['configuration', 'pending-admissions', 'chat-mappings']) {
-    const alias = setup(t, { section, initial }); await settle();
-    assert.ok(form(alias.primary, 'Add bot'));
-    assert.ok(named(alias.root, 'button', 'Manage Default bot'));
-    await chooseBot(alias, 'Default bot');
-    assert.match(alias.primary.textContent, /Default bot Council/);
-    alias.unmount();
-  }
-  assert.equal(mountSettings({ section: 'other', primary: { replace() { throw Error('must not mount'); } }, api: async () => ({}) }), undefined);
+  const oldRoot = new FakeNode('div');
+  const old = mountArchive({ root: oldRoot, api: async () => ({ ...legacy, coreAgentTurns: { available: true } }) });
+  t.after(() => old.unmount()); await settle();
+  assert.match(oldRoot.textContent, /@switchboard_bot/);
+  assert.match(oldRoot.textContent, /Default bot Council/);
+  assert.match(oldRoot.textContent, /Recent deliveries/);
 });
 
 test('Initial read error is retryable; later refresh errors keep the usable editor and draft', async t => {
@@ -1894,4 +1886,163 @@ test('Cancel remains guarded after a failed chat edit is abandoned by selecting 
   await click(button(edit, 'Cancel'));
   assert.deepEqual(f.host.navigations.at(-1), { dirty: false, busy: false });
   assert.match(row(f.primary, 'Primary Council').textContent, /Hatchet answers/);
+});
+
+test('Archive preserves diagnostic fields, effective labels and bounded-snapshot explanation', async t => {
+  const root = new FakeNode('div');
+  const state = config();
+  state.connections[0].coreAgentTurns = { available: false, reason: 'Core offline' };
+  state.connections[0].transport.error = 'Telegram timeout';
+  state.connections[0].mappings[0].topicId = 'topic-42';
+  state.connections[0].mappings[0].agentName = 'Effective Hatchet';
+  state.connections[0].deliveries[0].direction = 'outbound';
+  state.connections[0].deliveries[0].agentName = 'Delivery Hatchet';
+  const mounted = mountArchive({ root, api: async () => state });
+  t.after(() => mounted.unmount()); await settle();
+  for (const value of ['Core offline', 'Connection problem', 'active', '@switchboard_bot', 'topic topic-42', 'Effective Hatchet', 'Allowed', 'Primary Rob', 'direct', 'Delivery Hatchet', 'delivered', 'To Primary Rob', 'Current bounded snapshot', 'independent of Archive date filter']) assert.match(root.textContent, new RegExp(value));
+});
+
+test('Archive refresh polls only while visible, prevents overlap, preserves selection and unchanged reader', async t => {
+  const realSet = globalThis.setInterval, realClear = globalThis.clearInterval;
+  let tick, cleared = false;
+  globalThis.setInterval = (callback, ms) => { assert.equal(ms, 10_000); tick = callback; return 123; };
+  globalThis.clearInterval = handle => { assert.equal(handle, 123); cleared = true; };
+  t.after(() => { globalThis.setInterval = realSet; globalThis.clearInterval = realClear; });
+  const root = new FakeNode('div'); const pending = []; const signals = [];
+  const mounted = mountArchive({ root, api: (path, init) => { assert.equal(path, '/configuration'); signals.push(init.signal); const wait = deferred(); pending.push(wait); return wait.promise; } });
+  t.after(() => mounted.unmount());
+  pending.shift().resolve(config()); await settle();
+  await click(named(root, 'button', 'Inspect Alerts'));
+  const reader = named(root, 'section', 'Switchboard diagnostics');
+  const previous = reader.children[0];
+  const refresh = named(root, 'button', 'Refresh diagnostics');
+  refresh.focus(); reader.scrollTop = 37;
+  document.hidden = true; tick(); assert.equal(pending.length, 0);
+  document.hidden = false; tick(); tick(); assert.equal(pending.length, 1);
+  assert.equal(refresh.disabled, true);
+  pending.shift().resolve(config()); await settle();
+  assert.equal(reader.children[0], previous);
+  assert.equal(reader.scrollTop, 37);
+  assert.equal(document.activeElement, refresh);
+  assert.match(root.textContent, /Alerts Council/);
+  await click(refresh); assert.equal(pending.length, 1);
+  const late = pending.shift(); mounted.unmount(); assert.equal(cleared, true);
+  assert.ok(signals.every(signal => signal.aborted));
+  late.resolve(config()); await settle(); assert.equal(root.textContent, '');
+});
+
+for (const initial of [{ connections: [] }, config()]) {
+  test(`Archive initial failure retries into ${initial.connections.length ? 'bots' : 'empty inventory'}`, async t => {
+    const root = new FakeNode('div'); let reads = 0;
+    const mounted = mountArchive({ root, api: async () => {
+      if (++reads === 1) throw Error('network down');
+      return initial;
+    } });
+    t.after(() => mounted.unmount()); await settle();
+    assert.match(root.textContent, /Bots unknown/);
+    assert.equal(byText(root, 'strong', '0 bots'), undefined);
+    assert.equal(byTag(root, 'section').filter(node => node.className.includes('archive-empty-state') && node.textContent === 'Diagnostics unavailable. Refresh to try again.').length, 2);
+    assert.doesNotMatch(root.textContent, /No bots connected yet/);
+    assert.match(need(byAttr(root, 'p', 'role', 'alert'), 'initial read error').textContent, /network down/);
+    await click(named(root, 'button', 'Refresh diagnostics'));
+    assert.equal(reads, 2);
+    assert.equal(byAttr(root, 'p', 'role', 'alert'), undefined);
+    assert.doesNotMatch(root.textContent, /Diagnostics unavailable|Bots unknown/);
+    assert.match(root.textContent, new RegExp(`${initial.connections.length} bots`));
+    if (initial.connections.length) {
+      assert.ok(named(root, 'button', 'Inspect Primary'));
+      assert.match(named(root, 'section', 'Switchboard diagnostics').textContent, /Primary Council/);
+    } else {
+      assert.match(root.textContent, /No bots connected yet\. Open Settings → Switchboard → Bots to add one\./);
+      assert.equal(byAttr(root, 'button', 'aria-label', 'Inspect Primary'), undefined);
+    }
+  });
+}
+
+test('Archive refresh failure retains the selected diagnostics and allows retry', async t => {
+  const root = new FakeNode('div'); let fail = false;
+  const mounted = mountArchive({ root, api: async () => { if (fail) throw Error('network down'); return config(); } });
+  t.after(() => mounted.unmount()); await settle();
+  await click(named(root, 'button', 'Inspect Alerts'));
+  fail = true; await click(named(root, 'button', 'Refresh diagnostics'));
+  assert.match(root.textContent, /network down/);
+  assert.match(root.textContent, /Alerts Council/);
+  fail = false; await click(named(root, 'button', 'Refresh diagnostics'));
+  assert.doesNotMatch(root.textContent, /network down/);
+  assert.match(root.textContent, /Alerts Council/);
+});
+
+test('Archive refresh handles HTMLCollection-like children and respects in-flight focus and selection', async t => {
+  // Browser children is iterable and array-like but has no Array.find.
+  class CollectionNode extends FakeNode {
+    get children() { return Object.assign({ [Symbol.iterator]: function* () { yield* Object.values(this).filter(x => x instanceof FakeNode); } }, Object.fromEntries(this.childNodes.filter(n => n.tagName !== '#TEXT').map((n, i) => [i, n]))); }
+    contains(node) { return descendants(this).includes(node); }
+  }
+  document.createElement = tag => new CollectionNode(tag);
+  const root = new CollectionNode('div'); const requests = [];
+  let selection = { isCollapsed: true, anchorNode: null };
+  document.getSelection = () => selection;
+  const mounted = mountArchive({ root, api: (_path, init) => { const wait = deferred(); requests.push({ ...wait, signal: init.signal }); return wait.promise; } });
+  t.after(() => mounted.unmount());
+  requests[0].resolve(config()); await settle();
+  let refresh = named(root, 'button', 'Refresh diagnostics');
+  assert.equal(refresh.parentNode.children.find, undefined);
+  refresh.focus(); await click(refresh);
+  assert.equal(refresh.disabled, true);
+  const changed = config(); changed.connections[0].mappings[0].chatTitle = 'Updated Council';
+  requests[1].resolve(changed); await settle();
+  assert.match(root.textContent, /Updated Council/);
+  refresh = named(root, 'button', 'Refresh diagnostics');
+  assert.equal(document.activeElement, refresh);
+  await click(refresh);
+  const edit = document.createElement('textarea'); root.append(edit); edit.focus();
+  const changedAgain = config(); changedAgain.connections[0].mappings[0].chatTitle = 'Deferred Council';
+  requests[2].resolve(changedAgain); await settle();
+  assert.match(root.textContent, /Updated Council/);
+  assert.equal(document.activeElement, edit);
+  document.activeElement = null; root.dispatchEvent({ type: 'focusout' }); await settle();
+  assert.match(root.textContent, /Deferred Council/);
+  refresh = named(root, 'button', 'Refresh diagnostics'); await click(refresh);
+  const reader = named(root, 'section', 'Switchboard diagnostics');
+  selection = { isCollapsed: false, anchorNode: reader.children[0] };
+  const last = config(); last.connections[0].mappings[0].chatTitle = 'Selection Council';
+  requests[3].resolve(last); await settle();
+  assert.match(root.textContent, /Deferred Council/);
+  selection.isCollapsed = true; root.dispatchEvent({ type: 'mouseup' });
+  assert.match(root.textContent, /Selection Council/);
+  refresh = named(root, 'button', 'Refresh diagnostics'); await click(refresh);
+  mounted.unmount(); assert.equal(requests[4].signal.aborted, true);
+  requests[4].resolve(config()); await settle(); assert.equal(root.textContent, '');
+});
+
+
+test('Archive focused Inspect allows the 10s poll to update the selected ID and preserves button focus', async t => {
+  const realSet = globalThis.setInterval, realClear = globalThis.clearInterval;
+  let tick;
+  globalThis.setInterval = (callback, ms) => { assert.equal(ms, 10_000); tick = callback; return 123; };
+  globalThis.clearInterval = () => {};
+  t.after(() => { globalThis.setInterval = realSet; globalThis.clearInterval = realClear; });
+  const root = new FakeNode('div'); root.contains = node => descendants(root).includes(node);
+  let state = config(), reads = 0;
+  const mounted = mountArchive({ root, api: async () => { reads++; return state; } });
+  t.after(() => mounted.unmount()); await settle();
+  named(root, 'button', 'Inspect Alerts').focus();
+  await click(named(root, 'button', 'Inspect Alerts'));
+  state = config(); state.connections[1].mappings[0].chatTitle = 'Polled Alerts Council';
+  tick(); await settle();
+  assert.equal(reads, 2);
+  assert.match(named(root, 'section', 'Switchboard diagnostics').textContent, /Polled Alerts Council/);
+  assert.ok(named(root, 'button', 'Inspect Alerts').className.includes('selected'));
+  assert.equal(document.activeElement, named(root, 'button', 'Inspect Alerts'));
+  named(root, 'button', 'Refresh diagnostics').focus();
+  state = config(); state.connections[1].mappings[0].chatTitle = 'Manual Alerts Council';
+  await click(named(root, 'button', 'Refresh diagnostics'));
+  assert.equal(document.activeElement, named(root, 'button', 'Refresh diagnostics'));
+  assert.match(named(root, 'section', 'Switchboard diagnostics').textContent, /Manual Alerts Council/);
+  for (const tag of ['input', 'select', 'textarea', 'summary', 'div']) {
+    const control = new FakeNode(tag); if (tag === 'div') control.isContentEditable = true;
+    root.append(control); control.focus(); tick(); await settle();
+    assert.equal(reads, 3, `${tag} interaction gates polling`);
+    control.remove();
+  }
 });

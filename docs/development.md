@@ -43,7 +43,7 @@ npm run build
 node --test test/server.test.mjs test/telegram-group-routing.test.mjs test/telegram-image.test.mjs test/discord.test.mjs test/discord-server-access.test.mjs test/room-history.test.mjs test/ui.test.mjs
 ```
 
-`build` is syntax checking for the server modules and Settings UI, not bundling or a live provider test. Service tests inject controlled fetch implementations, including activation; the Core smoke test configures a disabled connection without a token. Automated tests require no live Telegram/Discord credentials or provider calls. The image roundtrip test additionally provisions PostgreSQL 17 through Core’s isolated runner, executes the normal Core turn pipeline and durable receipt/artifact stores, and checks the native vision request and controlled Telegram reply. PostgreSQL 17 binaries are required; the release gate installs them before running the Core tests.
+`build` is syntax checking for the server modules and Settings and Archive UI, not bundling or a live provider test. Service tests inject controlled fetch implementations, including activation; the Core smoke test configures a disabled connection without a token. Automated tests require no live Telegram/Discord credentials or provider calls. The image roundtrip test additionally provisions PostgreSQL 17 through Core’s isolated runner, executes the normal Core turn pipeline and durable receipt/artifact stores, and checks the native vision request and controlled Telegram reply. PostgreSQL 17 binaries are required; the release gate installs them before running the Core tests.
 
 The Core contract test needs a current compatible Burrow-Backend checkout. By default it looks for the sibling checkout; set the explicit path when layouts differ:
 
@@ -73,19 +73,20 @@ Fake-DOM tests do not replace browser layout/accessibility checks. Passing the c
 
 The repository workflow runs on main pushes and manual dispatch. It checks syntax, Telegram/Discord/server/UI tests and the Core contract against a current Backend checkout, then assigns a UTC calendar version, commits changed version files, tags and creates a development release. Repeated same-day tags receive a numeric suffix.
 
-A documentation push can therefore trigger the normal release workflow. Do not manually bump package or manifest versions merely to edit documentation. No changes to runtime, promotion or synchronization policy are required for these pages.
+A documentation push can therefore trigger the normal release workflow. Use the established `[skip ci]` commit convention for documentation-only source corrections when no release is intended. Do not manually bump package or manifest versions merely to edit documentation. No changes to runtime, promotion or synchronization policy are required for these pages.
 
 ## Source map
 
 | Source | Documentation responsibility |
 | --- | --- |
-| `burrow.mod.json` | Mod identity, version and two Settings registrations (Bots and Diagnostics) |
+| `burrow.mod.json` | Mod identity/version, Bots Settings registration and Archive diagnostics contribution |
 | `package.json` | Node requirement and check commands |
 | `server/index.mjs` | Activation/cleanup, routes, operator-auth gate, response/error policy |
 | `server/connections.mjs` | Multi-bot registry, scoped stores, migration and connection lifecycle |
 | `server/telegram.mjs` | Telegram calls, admission, mapping keys, polling offsets, Core turns, delivery states, bounded persistence |
 | `server/discord.mjs` | Discord Gateway/REST, channel/thread admission, delivery reconciliation and guild-channel context |
-| `ui/settings.js` | Actual operator controls, confirmation, snapshot loading, error presentation and disposal |
+| `ui/settings.js` | Bot configuration controls, compact status, confirmation, snapshot loading, error presentation and disposal |
+| `ui/archive.js` | Read-only current diagnostics in the host Archive list/detail layout, refresh/polling and disposal |
 | `test/server.test.mjs` | Server/service regression coverage |
 | `test/telegram-image.test.mjs` | Telegram image ingestion, safety and replay regression coverage |
 | `test/discord.test.mjs` | Discord transport and room-context regression coverage |
@@ -99,5 +100,6 @@ The hero in `docs/assets/hero.png` is the user-selected joint-effort Snickerdink
 ## Publication history
 
 The earlier pre-publication reconciliation at `056f0749542e92cfe6b2346b6ef7c6f268b5e4e7` (version **2026.10.22.2**) concerned the Telegram-only baseline and hero image. It does not describe the subsequent Discord implementation. The historical documentation pass did not claim a live provider test or alter runtime/release policy. Current image tests likewise use controlled local providers, not live Telegram/model credentials.
+
 
 

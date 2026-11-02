@@ -12,7 +12,7 @@ Keep the token secret. Do not paste it into chat, screenshots, logs, shell comma
 
 1. Create the bot through BotFather, install Switchboard, and open **Settings → Switchboard → Bots**.
 2. Choose **Add bot → Telegram**, enter a name and token, choose who answers new chats, and leave **Receive messages** on. Select an existing bot card to manage it.
-3. Check that the selected bot shows **Connected** and the intended responder. **Diagnostics** contains detailed delivery state; **Refresh** requests a new snapshot.
+3. Check that the selected bot shows **Connected** and the intended responder. **Archive → Mods → Switchboard** contains detailed delivery state; **Refresh** requests a new snapshot.
 4. Send nonempty text in a private chat. Under the same bot's **Waiting for approval**, choose who answers and **Allow chat**.
 5. Send a fresh message; the admission message is not replayed. Verify the reply and delivery state.
 
@@ -25,7 +25,7 @@ Telegram must deliver updates, then Switchboard routes them through approved acc
 3. Configure Telegram delivery as below. Send text in the group or a topic to create a pending **root-group** request for each bot that receives it. A targeted `/start@YourBotUsername` may also request access; Switchboard does not implement a special Telegram activation command.
 4. Approve the group once for each participating bot on **Bots**. Topics inherit group access; no topic-by-topic approval is needed. Existing explicit topic overrides remain authoritative.
 5. Send fresh ordinary human text: every admitted managed bot that receives the update can answer. Mention a connected bot to address only it, or reply to its message. Mentioning multiple managed bots selects them; explicit mentions override reply targeting. Human/unknown-bot mentions do not select a recipient.
-6. Check **Diagnostics**. Root and topics retain separate sessions/history despite shared group authorization. Messages from bot accounts are passive context, not wakeups; Telegram `sender_chat` messages represent a speaking chat and are handled separately (see [routing](routing.md)).
+6. Check **Archive → Mods → Switchboard**. Root and topics retain separate sessions/history despite shared group authorization. Messages from bot accounts are passive context, not wakeups; Telegram `sender_chat` messages represent a speaking chat and are handled separately (see [routing](routing.md)).
 
 Private chats remain separately admitted. Approval covers the route's participants, not only the requester. Telegram delivery settings do not bypass Switchboard access, and Switchboard cannot recover updates Telegram did not deliver.
 

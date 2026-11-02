@@ -1,10 +1,11 @@
 {
   "id": "burrow-switchboard",
   "name": "Switchboard",
-  "version": "2026.11.01",
+  "version": "2026.11.02",
   "server": "server/index.mjs",
   "ui": {
-    "settings": "ui/settings.js"
+    "settings": "ui/settings.js",
+    "archive": "ui/archive.js"
   },
   "contributions": {
     "settings": [
@@ -15,16 +16,6 @@
         },
         "primary": {
           "title": "Bots",
-          "capability": "settingsUi"
-        }
-      },
-      {
-        "id": "diagnostics",
-        "navigation": {
-          "title": "Diagnostics"
-        },
-        "primary": {
-          "title": "Diagnostics",
           "capability": "settingsUi"
         }
       }
