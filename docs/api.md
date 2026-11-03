@@ -1,6 +1,6 @@
 # Mod-local API
 
-These are **mod-local paths**, registered on `context.api`, not claims about a universal host URL prefix. The Settings UI uses the host-provided mod API client. Preserve the host's authentication and routing when integrating another client.
+These are **mod-local paths**, registered on `context.api`, not claims about a universal host URL prefix. The Settings and Archive UIs use the host-provided mod API client. Preserve the host's authentication and routing when integrating another client.
 
 ## Connection routes
 
@@ -52,7 +52,7 @@ Every successful route returns HTTP 200 with `{ "ok": true, ...state }` and `Cac
 - `coreAgentTurns`: available and, when unavailable, reason. This checks submit/read only, not image-input support or selected-model vision capability.
 - `mappings`: saved route fields plus resolved `agentName`. `inheritedAgent` identifies default-responder inheritance. On legacy Discord generated routes, omitted `inheritedAgent` falls back to `inherited`. Discord `inherited` separately means server-grant-dependent access; changing responders preserves this scope. A default-following DM never requires a guild grant, and clearing its default pauses delivery without creating invalid submissions.
 - `pending`: chat/topic/requester (Telegram) or DM/channel/thread/requester (Discord) admission records.
-- `deliveries`: recent records plus resolved `agentName` and sanitized per-record `error` when applicable. Frozen `submission` bodies, image bytes, captions and token-bearing download URLs are omitted. The Settings delivery list shows status; inspect this response for the detailed per-record error.
+- `deliveries`: recent records plus resolved `agentName` and sanitized per-record `error` when applicable. Frozen `submission` bodies, image bytes, captions and token-bearing download URLs are omitted. The Archive diagnostics delivery list shows status and the sanitized per-record error; this response supplies the same operator diagnostics.
 
 The token and internal Telegram offset or Discord gateway session state are not returned. Treat requester details and delivery metadata as operator data, not public telemetry.
 
@@ -69,5 +69,3 @@ Errors return `{ "ok": false, "error": "<code>" }` with no-store headers. Known 
 | 500 | Sanitized `switchboard_request_failed` |
 
 Validation order can affect which error is returned; for example approval validates the selected agent before looking up the pending ID. Do not depend on an error as a route-existence probe.
-
-
