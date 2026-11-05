@@ -17,6 +17,7 @@ function route(handler) {
 
 export async function activate(context, options = {}) {
   const service = createSwitchboardService({ ...options, context });
+  context.api.get('/archive', route(() => service.archiveState()));
   context.api.get('/bootstrap', route(() => service.publicState()));
   context.api.get('/configuration', route(() => service.publicState()));
   context.api.put('/configuration', route(request => service.configure(request.body)));
@@ -43,3 +44,4 @@ export async function activate(context, options = {}) {
 }
 
 export { createSwitchboardService } from './connections.mjs';
+

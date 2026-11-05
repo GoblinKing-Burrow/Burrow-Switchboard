@@ -1,3 +1,5 @@
+> Historical implementation note: this prior diagnostics design is superseded by [Historical Switchboard Archive](archive-native-acceptance.md). Current configuration and manual refresh no longer belong in Archive.
+
 # Switchboard Diagnostics → Archive — 2026-11-01
 
 ## Original request, in order
@@ -46,3 +48,4 @@ Direct comparison captures: baseline **20:34:16 UTC**; actual Archive normal **2
 Additional actual-host headless measurements at **1280×900**, with 60 synthetic bots and 40 deliveries per bot, confirmed the final delivery and last bot were reachable through the existing host scroll surface. No private stylesheet or shared-layout changes were introduced.
 
 **Visual acceptance: Pass for the inspected synthetic states.** No live bot configuration, provider delivery, installation, restart, deployment or paid generation was performed. The old `settings-acceptance.md` remains a dated historical receipt, not acceptance of this Archive move. Normal automated mod release assigns the next UTC calendar version; source is not proof that the operator has installed the update.
+

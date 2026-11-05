@@ -1,7 +1,7 @@
 {
   "id": "burrow-switchboard",
   "name": "Switchboard",
-  "version": "2026.11.04",
+  "version": "2026.11.05",
   "server": "server/index.mjs",
   "ui": {
     "settings": "ui/settings.js",
@@ -10,12 +10,42 @@
   "contributions": {
     "settings": [
       {
-        "id": "bots",
+        "id": "status",
         "navigation": {
-          "title": "Bots"
+          "title": "Status"
         },
         "primary": {
-          "title": "Bots",
+          "title": "Status",
+          "capability": "settingsUi"
+        }
+      },
+      {
+        "id": "configuration",
+        "navigation": {
+          "title": "Configuration"
+        },
+        "primary": {
+          "title": "Configuration",
+          "capability": "settingsUi"
+        }
+      },
+      {
+        "id": "pending-admissions",
+        "navigation": {
+          "title": "Pending admissions"
+        },
+        "primary": {
+          "title": "Pending admissions",
+          "capability": "settingsUi"
+        }
+      },
+      {
+        "id": "chat-mappings",
+        "navigation": {
+          "title": "Chat mappings"
+        },
+        "primary": {
+          "title": "Chat mappings",
           "capability": "settingsUi"
         }
       }

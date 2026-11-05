@@ -1,136 +1,170 @@
-// Read-only, current bounded Switchboard snapshot; independent of Archive's global date filter.
+// Historical work only. Settings owns configuration and current connection state.
 const el = (tag, className = '', text = '') => {
-  const node = document.createElement(tag);
-  node.className = className;
-  node.textContent = text;
-  return node;
+  const node = document.createElement(tag); node.className = className; node.textContent = text; return node;
 };
-const date = value => value ? (Number.isNaN(new Date(value).getTime()) ? String(value) : new Date(value).toLocaleString()) : '—';
-const title = item => String(item?.chatTitle || item?.title || item?.chatId || 'Unnamed chat');
-const identity = item => String(item?.id || 'default');
-const name = item => String(item?.name || 'Default bot');
+const title = item => String(item.chatTitle || item.chatId || item.channelId || 'Recorded work');
+const botName = item => String(item.connectionName || item.connectionId || 'Unknown bot');
 const transport = item => item.transportType === 'discord' ? 'Discord' : 'Telegram';
-const status = item => !item.tokenConfigured && !item.bot?.configured ? 'Needs token' : item.enabled === false ? 'Paused' : item.transport?.error || ['degraded', 'error', 'failed'].includes(item.transport?.health) ? 'Connection problem' : item.transport?.health === 'healthy' ? 'Connected' : 'Connecting';
-const entries = (item, key, legacy) => item[key] || item[legacy] || [];
+const timestamp = item => item.at || item.createdAt;
+const categories = { work: 'All work', inbound: 'Received work', outbound: 'Reply outcomes' };
+const PAGE_SIZE = 50;
 
-export function mountArchive({ root, api }) {
+export function mountArchive({ root, api, configureHeader, filters = {}, date = '', timeZone = 'UTC' }) {
   const controller = new AbortController();
-  let mounted = true, loading = false, hasSnapshot = false, selected = '', records = [], error = '', deferred = null;
+  let mounted = true, loading = false, hasSnapshot = false, selected = '', snapshot = { records: [], coverage: {} }, error = '';
+  let category = Object.hasOwn(categories, filters.category) ? filters.category : 'work';
+  let search = filters.search || '', botId = filters.participantId || '', selectedDate = date, zone = timeZone;
+  let pageSize = PAGE_SIZE, detailKey = '', headerKey = '', readerId = '', deferred = null, deferredError = false;
   const shell = el('div', 'archive-split-view');
-  const results = el('section', 'archive-results-pane');
-  results.setAttribute('aria-label', 'Switchboard bots');
-  const reader = el('section', 'archive-reader-pane');
-  reader.setAttribute('aria-label', 'Switchboard diagnostics');
+  const results = el('section', 'archive-results-pane'); results.setAttribute('aria-label', 'Switchboard historical work');
+  const reader = el('section', 'archive-reader-pane'); reader.setAttribute('aria-label', 'Switchboard work details');
   shell.append(results, reader); root.replaceChildren(shell);
-  function detail(item) {
-    reader.replaceChildren();
-    if (!item) { reader.append(el('section', 'archive-empty-state archive-reader-placeholder', !hasSnapshot && error ? 'Diagnostics unavailable. Refresh to try again.' : 'Select a bot to inspect its diagnostics.')); return; }
-    const body = el('div', 'archive-content-body archive-reader-body');
-    const header = el('header', 'archive-content-toolbar');
-    header.append(el('span', 'eyebrow', `${transport(item)} · ${status(item)}`), el('h2', '', name(item)));
-    body.append(header);
-    const facts = el('dl', 'archive-reader-summary');
-    for (const [key, value] of [
-      ['Connection', status(item)], ['Transport', `${transport(item)} · ${item.transport?.health || 'unknown'}`],
-      ['Activity', `${item.transport?.polling || 'unknown'} · ${date(item.transport?.lastPollAt)}`],
-      ['Bot', item.bot?.username || item.botIdentity?.username ? `@${item.bot?.username || item.botIdentity?.username}` : 'Not configured'],
-      ['Burrow', (item.coreAgentTurns || item.core || {}).available ? 'Available' : (item.coreAgentTurns || item.core || {}).reason || 'Unavailable'],
-    ]) facts.append(el('dt', '', key), el('dd', '', value));
-    body.append(facts);
-    if (item.transport?.error) { const warning = el('p', 'archive-error', item.transport.error); warning.setAttribute('role', 'alert'); body.append(warning); }
-    const agent = entry => entry.agentName || entry.agentId || 'No goblin';
-    for (const [heading, items, describe] of [
-      ['Approved mappings', entries(item, 'mappings', 'chatMappings'), entry => `${entry.chatType || 'chat'}${entry.topicId != null ? ` · topic ${entry.topicId}` : ''} · ${agent(entry)}${entry.sessionId ? ` · session ${entry.sessionId}` : ''} · ${entry.enabled === false ? 'Paused' : 'Allowed'}`],
-      ['Pending admissions', entries(item, 'pending', 'pendingAdmissions'), entry => `${entry.chatType || 'chat'} · ${date(entry.requestedAt)}`],
-      ['Recent deliveries', entries(item, 'deliveries', 'recentDeliveries'), entry => `${agent(entry)}${entry.sessionId ? ` · session ${entry.sessionId}` : ''}${entry.topicId != null ? ` · topic ${entry.topicId}` : ''} · ${date(entry.at || entry.createdAt)} · ${entry.status || 'unknown'}${entry.error ? ` · ${entry.error}` : ''}`],
-    ]) {
-      const group = el('section', 'archive-reader-summary');
-      group.append(el('h3', '', heading));
-      if (!items.length) group.append(el('p', '', 'None recorded.'));
-      for (const entry of items) {
-        const row = el('article', 'archive-turn');
-        row.append(el('strong', '', `${heading === 'Recent deliveries' ? entry.direction === 'outbound' ? 'To ' : 'From ' : ''}${title(entry)}`), el('p', '', describe(entry)));
-        group.append(row);
+  let indexed = [], metadata = new WeakMap(), headerDirty = true;
+  let dateFormatter, dayFormatter;
+  function indexSnapshot() {
+    // Formatting and search normalization happen once per snapshot/timezone,
+    // never once per keystroke. Formatter construction is particularly costly.
+    try { dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short', timeZone: zone || 'UTC' }); }
+    catch { dateFormatter = null; }
+    try { dayFormatter = new Intl.DateTimeFormat('en-US', { timeZone: zone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }); }
+    catch { dayFormatter = null; }
+    const dates = new Map(); metadata = new WeakMap();
+    indexed = snapshot.records.map(entry => {
+      const stamp = timestamp(entry);
+      if (!dates.has(stamp)) {
+        const parsed = new Date(stamp), valid = Boolean(stamp) && !Number.isNaN(parsed.getTime());
+        const formatted = valid ? dateFormatter ? dateFormatter.format(parsed) : parsed.toISOString() : 'Time not recorded';
+        let day = '';
+        if (valid && dayFormatter) {
+          const parts = dayFormatter.formatToParts(parsed), part = type => parts.find(p => p.type === type)?.value;
+          day = `${part('year')}-${part('month')}-${part('day')}`;
+        }
+        dates.set(stamp, { formatted, day });
       }
-      body.append(group);
+      const { formatted, day } = dates.get(stamp);
+      const description = `${entry.direction === 'outbound' ? 'Reply' : 'Received work'} · ${entry.status || 'Unknown outcome'} · ${entry.agentName || entry.agentId || 'Goblin not recorded'} · ${formatted}`;
+      const fields = [title(entry), botName(entry), entry.connectionId, transport(entry), description, entry.id, entry.recordId, entry.chatId, entry.channelId, entry.guildId, entry.topicId, entry.sessionId, entry.turnId, entry.agentId, entry.error];
+      const item = { entry, formatted, day, description, search: fields.filter(value => value != null).join(' ').toLocaleLowerCase() };
+      metadata.set(entry, item); return item;
+    });
+  }
+  const formatDate = entry => metadata.get(entry)?.formatted || 'Time not recorded';
+  const describe = entry => metadata.get(entry)?.description || '';
+  function rows() {
+    const query = search.trim().toLocaleLowerCase();
+    return indexed.filter(({ entry, day, search: text }) =>
+      (category === 'work' || entry.direction === category) && (!botId || entry.connectionId === botId) &&
+      (!selectedDate || day === selectedDate) && (!query || text.includes(query))).map(item => item.entry);
+  }
+  function publishHeader() {
+    if (!headerDirty || typeof configureHeader !== 'function') return;
+    headerDirty = false;
+    const bots = [...new Map(snapshot.records.map(entry => [entry.connectionId, entry])).values()];
+    const duplicates = new Map();
+    for (const bot of bots) duplicates.set(botName(bot), (duplicates.get(botName(bot)) || 0) + 1);
+    const header = {
+      categories: Object.entries(categories).map(([id, label]) => ({ id, label })),
+      participants: bots.map(bot => ({ id: bot.connectionId, label: `${botName(bot)}${duplicates.get(botName(bot)) > 1 ? ` (${bot.connectionId})` : ''} · ${transport(bot)}` })),
+      participantLabel: 'Historical bot', participantsDisabled: !hasSnapshot,
+      participantsStatus: hasSnapshot ? '' : error ? 'History unavailable. Retrying automatically.' : 'Loading history…',
+      searchPlaceholder: 'Search historical work and outcomes', searchMaxLength: 500,
+    };
+    const key = JSON.stringify(header); if (key !== headerKey) { headerKey = key; configureHeader(header); }
+  }
+  function detail(entry) {
+    const key = JSON.stringify([zone, entry, snapshot.coverage.limit, snapshot.coverage.byteLimit, entry ? '' : error]); if (key === detailKey) return;
+    const previousBody = Array.from(reader.children).find(node => node.className === 'archive-content-body');
+    const scroll = readerId === entry?.id ? previousBody?.scrollTop || 0 : 0;
+    readerId = entry?.id || ''; detailKey = key; reader.replaceChildren();
+    if (!entry) { reader.append(el('section', 'archive-empty-state archive-reader-placeholder', !hasSnapshot && error ? 'History unavailable. Retrying automatically.' : 'Select recorded work to read its outcome.')); return; }
+    const toolbar = el('header', 'archive-reader-toolbar');
+    toolbar.append(el('span', 'eyebrow', `${transport(entry)} · ${entry.status || 'Unknown outcome'}`), el('h2', '', title(entry)), el('p', '', `${botName(entry)} · ${formatDate(entry)} · ${zone || 'UTC'}`));
+    const body = el('div', 'archive-content-body'); const article = el('article', 'archive-reader');
+    article.append(el('p', 'archive-reader-summary', describe(entry)));
+    // Historical metadata, not the current bot, route, agent configuration or health.
+    for (const [label, value] of [['Record ID', entry.recordId || entry.id], ['Bot ID', entry.connectionId], ['Chat ID', entry.chatId], ['Channel', entry.channelId], ['Server', entry.guildId], ['Goblin ID', entry.agentId], ['Session', entry.sessionId], ['Turn', entry.turnId], ['Topic', entry.topicId], ['Outcome detail', entry.error]]) {
+      if (value == null || value === '') continue;
+      const p = el('p'); p.append(el('strong', '', `${label}: `), el('span', '', String(value))); article.append(p);
     }
-    reader.append(body);
+    if (entry.error === 'connection_stopped_for_removal') article.append(el('p', 'archive-snapshot-note', 'The bridge stopped for bot removal. This does not establish whether the Core work stopped or an uncertain send reached its destination.'));
+    article.append(el('p', 'archive-snapshot-note', `Counts are matching retained records, not unique conversations or lifetime totals. Retention: up to ${snapshot.coverage.limit || 'the configured limit'} records${snapshot.coverage.byteLimit ? ` / ${snapshot.coverage.byteLimit} bytes` : ''}. Earlier versions retained only a limited delivery window; older work cannot be reconstructed.`));
+    article.append(el('p', 'archive-snapshot-note', 'Recorded delivery metadata. Message bodies and completed work artifacts are not stored in this archive.'));
+    body.append(article); reader.append(toolbar, body); body.scrollTop = scroll;
   }
   function render() {
-    const focus = document.activeElement?.getAttribute?.('aria-label');
-    const resultsScroll = results.scrollTop, readerScroll = reader.scrollTop;
-    results.replaceChildren();
-    const heading = el('div', 'archive-pane-heading');
-    heading.append(el('span', 'eyebrow', 'Diagnostics'), el('strong', '', hasSnapshot ? `${records.length} bots` : 'Bots unknown')); results.append(heading);
-    results.append(el('p', 'archive-snapshot-note', 'Current bounded snapshot · independent of Archive date filter.'));
-    const refresh = el('button', 'archive-load-more', loading ? 'Refreshing…' : 'Refresh');
-    refresh.type = 'button'; refresh.disabled = loading;
-    refresh.setAttribute('aria-label', 'Refresh diagnostics');
-    refresh.addEventListener('click', () => void load()); results.append(refresh);
-    if (error) { const warning = el('p', 'archive-error', `Could not refresh diagnostics: ${error}`); warning.setAttribute('role', 'alert'); results.append(warning); }
-    const list = el('div', 'archive-session-list'); results.append(list);
-    if (!records.length) list.append(el('section', 'archive-empty-state', !hasSnapshot && error ? 'Diagnostics unavailable. Refresh to try again.' : loading ? 'Loading diagnostics…' : 'No bots connected yet. Open Settings → Switchboard → Bots to add one.'));
-    for (const item of records) {
-      const button = el('button', `archive-session-card${selected === identity(item) ? ' selected' : ''}`);
-      button.type = 'button'; button.setAttribute('aria-label', `Inspect ${name(item)}`);
-      const main = el('div', 'archive-session-main');
-      main.append(el('h3', '', name(item)), el('p', '', `${transport(item)} · ${status(item)}`)); button.append(main);
-      button.addEventListener('click', () => { if (selected !== identity(item)) { selected = identity(item); render(); } }); list.append(button);
+    const focusId = document.activeElement?.getAttribute?.('data-record-id');
+    const resultsScroll = results.scrollTop;
+    const oldList = Array.from(results.children).find(node => node.className === 'archive-session-list'); const listScroll = oldList?.scrollTop || 0;
+    results.replaceChildren(); const matching = rows(), visible = matching.slice(0, pageSize);
+    if (!visible.some(row => row.id === selected)) selected = visible[0]?.id || '';
+    const heading = el('div', 'archive-pane-heading'); const count = el('strong', '', hasSnapshot ? `${matching.length} records` : 'History unknown');
+    count.setAttribute('role', 'status'); count.setAttribute('aria-live', 'polite'); heading.append(el('span', 'eyebrow', categories[category]), count); results.append(heading);
+    if (hasSnapshot) {
+      const counts = new Map(); for (const entry of matching) counts.set(entry.status || 'Unknown outcome', (counts.get(entry.status || 'Unknown outcome') || 0) + 1);
+      results.append(el('p', 'archive-snapshot-note', `Matching retained: ${[...counts].map(([status, n]) => `${n} ${status}`).join(' · ') || 'none'}.`));
+      const coverage = snapshot.coverage;
+      results.append(el('p', 'archive-snapshot-note', `${coverage.truncated ? 'Older archive records removed by retention.' : 'Retained window; older history may be missing.'} · ${zone || 'UTC'}`));
     }
-    detail(records.find(item => identity(item) === selected));
-    results.scrollTop = resultsScroll; reader.scrollTop = readerScroll;
-    if (focus) [refresh, ...list.children].find(node => node.getAttribute?.('aria-label') === focus)?.focus();
+    if (snapshot.warning) { const gap = el('p', 'archive-error', 'Some history could not be saved. This archive may have gaps; counts include only retained records.'); gap.setAttribute('role', 'alert'); results.append(gap); }
+    if (error) { const warning = el('p', 'archive-error', `${hasSnapshot ? 'Showing stale history. ' : 'History unavailable. '}Automatic retry pending: ${error}`); warning.setAttribute('role', 'alert'); results.append(warning); }
+    const list = el('div', 'archive-session-list'); results.append(list);
+    if (!matching.length) list.append(el('section', 'archive-empty-state', !hasSnapshot && error ? 'History unavailable. Retrying automatically.' : !hasSnapshot ? 'Loading history…' : !snapshot.records.length ? 'No historical work recorded yet.' : 'No matching records. Try another search, bot, or date.'));
+    for (const entry of visible) {
+      const button = el('button', `archive-session-card${selected === entry.id ? ' selected' : ''}`); button.type = 'button';
+      button.setAttribute('aria-label', `Read ${title(entry)} · ${botName(entry)} · ${entry.id}`); button.setAttribute('aria-pressed', String(selected === entry.id)); button.setAttribute('data-record-id', entry.id);
+      const main = el('div', 'archive-session-main'); main.append(el('div', 'archive-session-meta', `${botName(entry)} · ${transport(entry)}`), el('h3', '', title(entry)), el('p', '', describe(entry)));
+      button.append(main, el('div', 'archive-session-side', formatDate(entry)));
+      button.addEventListener('click', () => { if (selected !== entry.id) { selected = entry.id; render(); } }); list.append(button);
+    }
+    if (matching.length > visible.length) {
+      const more = el('button', 'archive-load-more', `Load more (${visible.length} of ${matching.length})`); more.type = 'button'; more.setAttribute('aria-label', 'Load more historical records');
+      more.addEventListener('click', () => { const index = visible.length; pageSize += PAGE_SIZE; render(); const updated = Array.from(results.children).find(node => node.className === 'archive-session-list'); Array.from(updated?.children || [])[index]?.focus(); }); results.append(more);
+    }
+    detail(visible.find(row => row.id === selected)); results.scrollTop = resultsScroll; list.scrollTop = listScroll;
+    if (focusId != null) Array.from(list.children).find(node => node.getAttribute?.('data-record-id') === focusId)?.focus();
+    publishHeader();
   }
   const interacting = () => {
-    const active = document.activeElement;
-    const selection = document.getSelection?.();
+    const active = document.activeElement, selection = document.getSelection?.();
     return (active && root.contains?.(active) && (['INPUT', 'SELECT', 'TEXTAREA', 'SUMMARY'].includes(active.tagName) || active.isContentEditable)) || (selection && !selection.isCollapsed && root.contains?.(selection.anchorNode));
   };
+  function apply(next) {
+    const changed = !hasSnapshot || JSON.stringify(next) !== JSON.stringify(snapshot), hadError = Boolean(error);
+    hasSnapshot = true; error = '';
+    if (changed) { snapshot = next; indexSnapshot(); headerDirty = true; }
+    if (hadError) headerDirty = true;
+    if (changed || hadError) render();
+  }
   async function load() {
-    if (!mounted || loading) return;
-    loading = true;
-    if (records.length || error) { const refresh = Array.from(results.children).find(node => node.getAttribute?.('aria-label') === 'Refresh diagnostics'); if (refresh) { refresh.disabled = true; refresh.textContent = 'Refreshing…'; } }
+    if (!mounted || loading) return; loading = true;
     try {
-      const value = await api('/configuration', { signal: controller.signal });
-      if (!mounted) return;
-      const next = Array.isArray(value.connections) ? value.connections.map(item => ({ ...item, coreAgentTurns: item.coreAgentTurns || value.coreAgentTurns })) : [value];
-      if (interacting()) { deferred = next; loading = false; renderControls(); return; }
-      deferred = null;
-      const firstSnapshot = !hasSnapshot; hasSnapshot = true;
-      const hadError = Boolean(error); error = ''; loading = false;
-      if (firstSnapshot || JSON.stringify(next) !== JSON.stringify(records)) {
-        records = next;
-        if (!records.some(item => identity(item) === selected)) selected = records.length ? identity(records[0]) : '';
-        render();
-      } else if (hadError) render(); else renderControls();
+      const value = await api('/archive', { signal: controller.signal }); if (!mounted) return;
+      if (!Array.isArray(value?.records) || !value.coverage || typeof value.coverage !== 'object') throw Error('Historical archive response unavailable');
+      const next = { records: value.records, coverage: value.coverage, warning: value.warning || '' }; loading = false;
+      if (interacting()) { deferred = next; return; }
+      deferred = null; deferredError = false; apply(next);
     } catch (cause) {
-      if (!mounted) return;
-      loading = false; error = cause instanceof Error ? cause.message : 'Unknown error';
-      if (interacting()) { deferred = null; renderControls(); return; }
-      render();
+      if (!mounted) return; loading = false; error = cause instanceof Error ? cause.message : 'Unknown error'; headerDirty = true;
+      if (interacting()) { deferred = null; deferredError = true; return; } render();
     }
   }
-  function renderControls() {
-    const refresh = Array.from(results.children).find(node => node.getAttribute?.('aria-label') === 'Refresh diagnostics');
-    if (refresh) { refresh.disabled = false; refresh.textContent = 'Refresh'; }
-  }
   function applyDeferred() {
-    if (!mounted || !deferred || interacting()) return;
-    const next = deferred; deferred = null; error = '';
-    const firstSnapshot = !hasSnapshot; hasSnapshot = true;
-    if (firstSnapshot || JSON.stringify(next) !== JSON.stringify(records)) {
-      records = next;
-      if (!records.some(item => identity(item) === selected)) selected = records.length ? identity(records[0]) : '';
-      render();
-    } else renderControls();
+    if (!mounted || interacting()) return;
+    if (deferredError) { deferredError = false; render(); }
+    if (deferred) { const next = deferred; deferred = null; apply(next); }
   }
   const onFocusOut = () => queueMicrotask(applyDeferred);
-  root.addEventListener('focusout', onFocusOut);
-  root.addEventListener('mouseup', applyDeferred);
-  root.addEventListener('keyup', applyDeferred);
-  render();
-  void load();
-  const timer = setInterval(() => { if (!mounted || document.hidden) return; applyDeferred(); if (!loading && !deferred && !interacting()) void load(); }, 10_000);
-  timer.unref?.();
-  return { unmount() { mounted = false; root.removeEventListener('focusout', onFocusOut); root.removeEventListener('mouseup', applyDeferred); root.removeEventListener('keyup', applyDeferred); controller.abort(); clearInterval(timer); shell.remove(); } };
+  root.addEventListener('focusout', onFocusOut); root.addEventListener('mouseup', applyDeferred); root.addEventListener('keyup', applyDeferred);
+  render(); void load();
+  const timer = setInterval(() => { if (!mounted || document.hidden) return; applyDeferred(); if (!loading && !deferred && !interacting()) void load(); }, 10_000); timer.unref?.();
+  return {
+    update(context) {
+      if (!mounted) return; const previousZone = zone; const previous = JSON.stringify([category, search, botId, selectedDate, zone]);
+      if (context.filters) { category = Object.hasOwn(categories, context.filters.category) ? context.filters.category : 'work'; search = context.filters.search || ''; botId = context.filters.participantId || ''; }
+      selectedDate = context.date || ''; zone = context.timeZone || 'UTC';
+      if (zone !== previousZone) indexSnapshot();
+      if (JSON.stringify([category, search, botId, selectedDate, zone]) !== previous) { pageSize = PAGE_SIZE; render(); }
+    },
+    unmount() { mounted = false; root.removeEventListener('focusout', onFocusOut); root.removeEventListener('mouseup', applyDeferred); root.removeEventListener('keyup', applyDeferred); controller.abort(); clearInterval(timer); shell.remove(); },
+  };
 }

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createArchive } from './archive.mjs';
 import { createRoomHistory } from './room-history.mjs';
 import { createTelegramApi, createTelegramConnection } from './telegram.mjs';
 import { createDiscordApi, createDiscordConnection } from './discord.mjs';
@@ -20,6 +21,10 @@ export function createSwitchboardService(options = {}) {
   const { context, fetchImpl = fetch } = options;
   if (!context?.settings || !context?.secrets || !context?.agents) throw new Error('switchboard_context_required');
   const roomHistory = createRoomHistory({ settings: context.settings, clock: options.clock });
+  const archive = createArchive({ settings: context.settings, clock: options.clock });
+  const identities = new Map();
+  let archiveError = false;
+  let archiveRetry = false;
   const workers = new Map();
   const kinds = new Map();
   let queue = Promise.resolve();
@@ -44,6 +49,7 @@ export function createSwitchboardService(options = {}) {
       const kind = item.transport || 'telegram';
       if (!['telegram', 'discord'].includes(kind)) fail('connection_transport_invalid');
       kinds.set(item.id, kind);
+      identities.set(item.id, { ...item, transport: kind });
     }
     return list;
   }
@@ -67,7 +73,31 @@ export function createSwitchboardService(options = {}) {
         ...context,
         settings: {
           get: (name, fallback) => context.settings.get(key(id, name), fallback),
-          set: (name, value) => context.settings.set(key(id, name), value),
+          set: async (name, value) => {
+            if (name !== 'deliveries') return context.settings.set(key(id, name), value);
+            const previous = await context.settings.get(key(id, name), []);
+            // Commit replay state first. Archive failures must never turn a
+            // confirmed send into an ambiguous retry or change poll offsets.
+            const result = await context.settings.set(key(id, name), value);
+            try {
+              const connection = identities.get(id) || { id, name: id, transport: kindFor(id) };
+              // Nonterminal replay writes and timestamp-only repeats are not
+              // new historical outcomes. Keep the delivery path independent of
+              // ledger size until there is something new to preserve.
+              const historyFields = ['id', 'direction', 'status', 'at', 'createdAt', 'chatId', 'chatTitle', 'chatType', 'channelId', 'guildId', 'topicId', 'agentId', 'sessionId', 'turnId', 'error'];
+              const comparable = item => JSON.stringify(historyFields.map(field => { const value = item[field]; return typeof value === 'string' || typeof value === 'number' ? String(value).slice(0, 256) : null; }));
+              const before = new Map(previous.map(item => [item.id, comparable(item)]));
+              const changed = value.filter(item => ['succeeded', 'delivered', 'failed', 'interrupted', 'unknown'].includes(item.status) && before.get(item.id) !== comparable(item));
+              if (!changed.length && !archiveRetry) return result;
+              await archive.capture([
+                { connection, deliveries: previous, observedWrite: false },
+                { connection, deliveries: value, observedWrite: false },
+                { connection, deliveries: changed },
+              ]);
+              archiveRetry = false;
+            } catch { await markArchiveFailure(); }
+            return result;
+          },
         },
         secrets: {
           get: name => context.secrets.get(key(id, name)),
@@ -96,6 +126,22 @@ export function createSwitchboardService(options = {}) {
     const legacy = connections.find(item => item.id === 'default');
     const coreAgentTurns = connections[0]?.coreAgentTurns || (context.agents?.turns?.submit && context.agents?.turns?.read ? { available: true } : { available: false, reason: 'core_external_agent_turns_unavailable' });
     return { ...(legacy || { enabled: false, tokenConfigured: false, bot: { configured: false }, transport: { enabled: false, health: 'stopped', polling: 'stopped' }, mappings: [], pending: [], deliveries: [] }), coreAgentTurns, connections };
+  }
+  async function markArchiveFailure() {
+    archiveError = true;
+    archiveRetry = true;
+    context.logger?.error('Switchboard history persistence failed');
+    try { await context.settings.set('archive-history-gap', true); } catch {}
+  }
+  async function archiveState() {
+    const list = await registry();
+    const snapshot = await archive.snapshot(() => Promise.all(list.map(async connection => ({ connection: { ...connection, transport: kindFor(connection.id) }, deliveries: await context.settings.get(key(connection.id, 'deliveries'), []) }))));
+    archiveRetry = false;
+    if (archiveError) await context.settings.set('archive-history-gap', true);
+    const captureGap = archiveError || await context.settings.get('archive-history-gap', false);
+    // A prior persistence failure means records may have been lost before a
+    // retry. Keep this warning even if current retained records are recovered.
+    return { ...snapshot, ...(captureGap ? { warning: 'archive_capture_failed' } : {}) };
   }
   async function identity(token, kind = 'telegram') {
     let bot;
@@ -148,6 +194,7 @@ export function createSwitchboardService(options = {}) {
       for (const name of STATE_KEYS) await context.settings.delete(key(id, name));
       throw error;
     }
+    identities.set(id, { id, name, transport: kind });
     worker(id);
     return publicState();
   }
@@ -186,11 +233,22 @@ export function createSwitchboardService(options = {}) {
     return publicState();
   }
   async function remove(id) {
-    const { list } = await entry(id);
+    const { list, found } = await entry(id);
     // Disable first, invalidate any long-poll result, then drain this worker.
     await worker(id).clearToken();
     await worker(id).close();
+    // Preserve every retained outcome before deleting the transport buffers.
+    // Failure stops removal here; the disabled connection remains recoverable.
     workers.delete(id);
+    const stoppedAt = new Date((options.clock || Date.now)()).toISOString();
+    const retained = await context.settings.get(key(id, 'deliveries'), []);
+    // This records the completed bridge stop, not Core cancellation or a
+    // successful registry deletion. Never mutate frozen replay inputs.
+    const stopped = retained.map(item => (['submitting', 'processing', 'sending'].includes(item.status) || (kindFor(id) === 'telegram' && item.direction === 'inbound' && item.submission && !item.turnId))
+      ? { ...item, status: item.status === 'sending' ? 'unknown' : 'interrupted', error: 'connection_stopped_for_removal', updatedAt: stoppedAt }
+      : item);
+    await archive.capture([{ connection: { ...found, transport: kindFor(id) }, deliveries: stopped }]);
+    await archiveState();
     kinds.delete(id);
     await context.settings.set('connections', list.filter(item => item.id !== id));
     for (const name of STATE_KEYS) await context.settings.delete(key(id, name));
@@ -205,6 +263,7 @@ export function createSwitchboardService(options = {}) {
   function start() {
     return serialize(async () => {
       if (closed) return;
+      try { await archiveState(); } catch { await markArchiveFailure(); }
       started = true;
       for (const item of await registry()) worker(item.id).start();
     });
@@ -217,6 +276,7 @@ export function createSwitchboardService(options = {}) {
   return Object.freeze({
     start, close,
     publicState: () => serialize(publicState),
+    archiveState: () => serialize(archiveState),
     createConnection: input => serialize(() => create(input)),
     configureConnection: (id, input) => serialize(() => configure(id, input)),
     clearConnectionToken: id => serialize(() => clearToken(id)),
@@ -237,3 +297,4 @@ export function createSwitchboardService(options = {}) {
     reconcile: (api, id = 'default') => action(id, 'reconcile', [api]),
   });
 }
+

@@ -86,7 +86,7 @@ A documentation push can therefore trigger the normal release workflow. Use the 
 | `server/telegram.mjs` | Telegram calls, admission, mapping keys, polling offsets, Core turns, delivery states, bounded persistence |
 | `server/discord.mjs` | Discord Gateway/REST, channel/thread admission, delivery reconciliation and guild-channel context |
 | `ui/settings.js` | Bot configuration controls, compact status, confirmation, snapshot loading, error presentation and disposal |
-| `ui/archive.js` | Read-only current diagnostics in the host Archive list/detail layout, refresh/polling and disposal |
+| `ui/archive.js` | Historical work/outcomes in the native Archive layout, automatic polling/retry and disposal |
 | `test/server.test.mjs` | Server/service regression coverage |
 | `test/telegram-image.test.mjs` | Telegram image ingestion, safety and replay regression coverage |
 | `test/discord.test.mjs` | Discord transport and room-context regression coverage |
@@ -100,6 +100,7 @@ The hero in `docs/assets/hero.png` is the user-selected joint-effort Snickerdink
 ## Publication history
 
 The earlier pre-publication reconciliation at `056f0749542e92cfe6b2346b6ef7c6f268b5e4e7` (version **2026.10.22.2**) concerned the Telegram-only baseline and hero image. It does not describe the subsequent Discord implementation. The historical documentation pass did not claim a live provider test or alter runtime/release policy. Current image tests likewise use controlled local providers, not live Telegram/model credentials.
+
 
 
 

@@ -1,10 +1,10 @@
 {
   "name": "burrow-switchboard",
-  "version": "2026.11.04",
+  "version": "2026.11.05",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node --check server/index.mjs && node --check server/discord.mjs && node --check server/telegram.mjs && node --check server/connections.mjs && node --check server/room-history.mjs && node --check ui/settings.js && node --check ui/archive.js",
+    "build": "node --check server/archive.mjs && node --check server/index.mjs && node --check server/discord.mjs && node --check server/telegram.mjs && node --check server/connections.mjs && node --check server/room-history.mjs && node --check ui/settings.js && node --check ui/archive.js",
     "test": "node --test test/*.test.mjs",
     "test:core": "node --test test/core-contract.test.mjs test/core-image-roundtrip.test.mjs"
   },
