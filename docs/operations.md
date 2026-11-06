@@ -12,7 +12,7 @@ Telegram answers are sent without a parse mode. Discord sends message content wi
 
 ## Multiple connections
 
-Select the intended bot in **Settings → Switchboard → Bots** for configuration or **Archive → Mods → Switchboard** for historical work/outcomes. Current health and admissions remain in Settings. Each worker has an independent Telegram cursor or Discord gateway session, credential, admissions and bounded delivery history. A failing or paused bot does not stop the other pollers. Token replacement is restricted to the same bot; add another connection for a different bot. Duplicate bots are rejected even when another connection is disabled or its credential was cleared, until that connection is removed.
+Select the intended bot in **Settings → Switchboard → Configuration** for configuration or **Archive → Mods → Switchboard** for historical work/outcomes. Requests are in **Pending admissions**, and approved access is in **Chat mappings**. Each worker has an independent Telegram cursor or Discord gateway session, credential, admissions and bounded delivery history. A failing or paused bot does not stop the other pollers. Token replacement is restricted to the same bot; add another connection for a different bot. Duplicate bots are rejected even when another connection is disabled or its credential was cleared, until that connection is removed.
 
 ## Telegram polling and Discord gateway behavior
 
@@ -26,7 +26,7 @@ State survives through host settings/secrets, but collections are bounded. The p
 
 ## Group, channel and thread quick checks
 
-For Telegram, check delivery/privacy, then the bot's assigned goblin and root-group approval on **Bots**. No known bot target means ordinary group speech broadcasts to participating bots; mentions/replies select known bots. Topics inherit group access, not history. Discord inherited access requires one server grant and a default agent, with Discord channel/thread permissions still applying. Explicit room overrides can independently block or grant access. See [routing](routing.md).
+For Telegram, check delivery/privacy, then the bot's assigned goblin and root-group approval under **Pending admissions** and approved access in **Chat mappings**. No known bot target means ordinary group speech broadcasts to participating bots; mentions/replies select known bots. Topics inherit group access, not history. Discord inherited access requires one server grant and a default agent, with Discord channel/thread permissions still applying. Explicit room overrides can independently block or grant access. See [routing](routing.md).
 
 For Discord, check each bot's Message Content intent, View Channels, Send Messages, Read Message History, Send Messages in Threads and private-thread membership. Authorize the observed server once per bot; channels/threads inherit access unless explicitly overridden; ask A to speak, then ask B about A's posted reply rather than expecting a bot-trigger loop. See [Discord setup](discord.md).
 
@@ -73,6 +73,3 @@ Pending uncertain Core submissions temporarily retain their exact image bytes an
 A first-attempt rejection known to occur before Core admission is terminal for that update: The delivery record contains a sanitized error (available in the mod-local bootstrap/configuration response), and polling continues to later text instead of wedging the bot. `core_image_attachments_unavailable` means Core rejected an image input with its generic input-invalid code; upgrade Core first, but this code alone does not prove a missing feature. Other codes are `core_turn_input_invalid`, `core_image_attachment_too_large`, `core_agent_not_found`, and `core_agent_disabled`.
 
 A lost acceptance response is different: exact frozen input stays pending under the original key, including during temporary Core-capability outages. Disabling/removing or reassigning its mapping interrupts frozen work and clears its stored bytes, even if an older record mislabeled it terminal. This cannot recall a Core turn already accepted. No automatic new-key retry is used for uncertain acceptance.
-
-
-

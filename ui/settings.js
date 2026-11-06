@@ -1,5 +1,4 @@
 export const settingsSections = Object.freeze([
-  { id: 'status', label: 'Status', layout: 'form' },
   { id: 'configuration', label: 'Configuration', layout: 'form' },
   { id: 'pending-admissions', label: 'Pending admissions', layout: 'form' },
   { id: 'chat-mappings', label: 'Chat mappings', layout: 'form' },
@@ -64,7 +63,6 @@ function request(api, controller, path, init = {}) { return api(path, { ...init,
 // workspace keeps its own complete scope in the native left form track.
 export function mountSettings({ section, primary, overflow = null, agents = [], api, confirm, navigate, setDraft, setEntitySelector, navigateSection }) {
   if (section === 'bots') section = 'configuration';
-  if (section === 'diagnostics') section = 'status';
   if (!settingsSections.some(item => item.id === section)) return;
   const startNew = section === 'configuration' && createOnConfiguration;
   if (section === 'configuration') createOnConfiguration = false;
@@ -80,7 +78,6 @@ export function mountSettings({ section, primary, overflow = null, agents = [], 
   let mounted = true, loading = false, busy = false, confirming = false, aggregate = null, editor = null;
   let feedback = '', failed = '', stateRevision = 0, editRevision = 0, saveControl = null, dirtyControl = null, currentForm = null;
   const pendingAgents = new Map();
-  const openDiagnostics = new Set();
   const connection = () => aggregate?.connections.find(item => item.id === selectedConnectionId) || aggregate?.connections[0] || null;
   const pathFor = state => `/connections/${encodeURIComponent(state.id)}`;
   const enabledAgent = id => agents.some(item => item.id === id && item.enabled !== false);
@@ -317,25 +314,6 @@ export function mountSettings({ section, primary, overflow = null, agents = [], 
       .filter(([, value]) => value != null && value !== '')
       .map(([name, value]) => el('p', { className: 'settings-help', text: `${name}: ${value}` }));
   }
-  function liveDiagnostics(state) {
-    const details = el('details', { className: 'settings-disclosure', 'aria-label': 'Current bot diagnostics' },
-      el('summary', { text: 'Current bot diagnostics' }),
-      el('p', { className: 'settings-help', text: `Bot: ${state.bot.username ? `@${String(state.bot.username).replace(/^@/, '')}` : state.bot.displayName || (state.tokenConfigured ? 'Configured' : 'Not configured')}${state.bot.id ? ` · Bot ID: ${state.bot.id}` : ''}` }),
-      el('p', { className: 'settings-help', text: `Burrow: ${state.core.available ? 'Available' : 'Unavailable'}${state.core.reason ? ` · ${state.core.reason}` : ''}` }),
-      el('p', { className: 'settings-help', text: `Activity: ${state.transport.polling || (state.enabled ? 'unknown' : 'stopped')} · ${state.transportType === 'discord' ? 'Last gateway activity' : 'Last poll'}: ${date(state.transport.lastPollAt)}` }),
-      ...(state.transport.gateway ? [el('p', { className: 'settings-help', text: `Gateway: ${state.transport.gateway}` })] : []),
-      el('h3', { text: `Recent delivery diagnostics (${state.deliveries.length})` }),
-      el('p', { className: 'settings-help', text: 'Current bounded transport snapshot, including in-flight work. Archive holds retained historical outcomes separately; neither view is a lifetime total. Connected does not prove successful execution or delivery.' }),
-      ...(!state.deliveries.length ? [el('p', { className: 'settings-empty', text: 'No recent deliveries.' })] : [el('div', { className: 'settings-stack' }, ...state.deliveries.map(item =>
-        el('article', { className: 'settings-stack', 'aria-label': `Delivery ${item.id || label(item)}` },
-          el('strong', { text: `${item.direction === 'outbound' ? 'To' : item.direction === 'inbound' ? 'From' : 'Chat'} ${label(item)}` }),
-          el('p', { className: 'settings-help', text: `${item.agentName || agentName(item.agentId)} · ${item.status || 'unknown'} · ${date(item.at || item.createdAt || item.updatedAt)}` }),
-          ...recordDetails(item),
-          ...(item.error ? [el('p', { className: 'settings-request-error', text: `Error: ${item.error}` })] : []))))]));
-    details.open = openDiagnostics.has(state.id);
-    details.addEventListener('toggle', () => { if (mounted) { if (details.open) openDiagnostics.add(state.id); else openDiagnostics.delete(state.id); } });
-    return details;
-  }
   function chatRow(item, state) {
     const key = `chat-${state.id}-${item.id}`;
     const server = state.servers.find(saved => saved.guildId === item.guildId);
@@ -434,28 +412,11 @@ export function mountSettings({ section, primary, overflow = null, agents = [], 
       },
     });
   }
-  function renderStatus(state) {
-    panel.replaceChildren(el('h2', { text: 'Status', tabindex: '-1', 'data-focus': 'editor-heading' }),
-      el('p', { className: 'settings-description', text: `${state.name} · ${transportName(state.transportType)} · ${status(state).text} · ${state.transport.health || 'unknown'}` }));
-    if (state.transport.error) panel.append(el('p', { className: 'settings-request-error', role: 'alert', text: state.transport.error }));
-    const diagnostic = liveDiagnostics(state);
-    // Status is a first-class workspace, not a disclosure below configuration.
-    panel.append(...[...diagnostic.children].filter(node => node.tagName !== 'SUMMARY'));
-    const summary = (title, items, describe) => el('section', { className: 'settings-group' },
-      el('h3', { text: `${title} (${items.length})` }),
-      ...(!items.length ? [el('p', { className: 'settings-empty', text: 'None recorded.' })] :
-        [el('div', { className: 'settings-stack' }, ...items.map(item => el('article', { className: 'settings-stack' },
-          el('strong', { text: label(item) }), el('p', { className: 'settings-help', text: describe(item) }), ...recordDetails(item))))]));
-    panel.append(summary('Approved mappings', state.mappings, item => `${roomType(item, state)} · ${agentName(item.agentId)} · ${mappingAccess(item, state)}`),
-      summary('Pending admissions', state.pending, item => `${roomType(item, state)} · Requested: ${date(item.requestedAt)}`),
-      el('p', { className: 'settings-help', text: `Allowed servers: ${state.servers.length} · Pending servers: ${state.pendingServers.filter(item => !state.servers.some(saved => saved.guildId === item.guildId)).length}` }));
-  }
   function renderWorkspace() {
     if (editor?.orphaned) { renderEditor(); return; }
     if (section === 'configuration') { renderEditor(); return; }
     const state = connection();
     if (!state) { panel.replaceChildren(el('h2', { text: settingsSections.find(item => item.id === section).label }), el('p', { className: 'settings-empty', text: 'No bot connections. Use Add bot to configure one.' })); return; }
-    if (section === 'status') { renderStatus(state); return; }
     if (section === 'chat-mappings' && editor?.kind === 'chat') {
       const item = state.mappings.find(item => item.id === editor.id);
       if (item) { panel.replaceChildren(...renderChatForm(state, item)); return; }

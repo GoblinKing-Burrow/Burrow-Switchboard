@@ -1,17 +1,16 @@
 # Settings reference
 
-Switchboard has four workspaces under **Settings → Switchboard**. The selected bot is shared across them through Burrow's native named-button selector, including its bounded overflow navigation. **Archive → Mods → Switchboard** remains retained historical work and outcomes, not live settings.
+Switchboard has three workspaces under **Settings → Switchboard**. The selected bot is shared across them through Burrow's native named-button selector, including its bounded overflow navigation. **Archive → Mods → Switchboard** remains retained historical work and outcomes, not live settings.
 
-- **Status**: live transport/Core health, bot identity, current delivery snapshot, approved mappings and pending admission summaries/counts. No configuration mutation controls.
 - **Configuration**: create a connection or edit its name, default responder, Receive messages and write-only token. One coupled **Save bot** scope; clear-token and removal remain separate confirmed operations.
 - **Pending admissions**: chat requests, request times/IDs, responder selection, Allow/Dismiss and newly observed Discord server admission. Empty queues are explicit.
 - **Chat mappings**: approved chats, topic/channel/thread exceptions, Discord server grants, responder changes, Pause/Resume and scoped removal/revocation.
 
 Each workspace uses the native `form` layout: a complete left-hand pane at wide available widths, full available width when constrained. The host owns the bot selector, subsection navigation, Statistics track and responsive shell. No mod-local stylesheet, width cap, private selector or dialog is introduced. Action buttons remain grouped and content-sized.
 
-**Add bot** opens Configuration through the shared guard from any workspace. Refresh is available above the workspace contents. Hosts must supply `confirm`, `navigate`, `setDraft`, `setEntitySelector` and `navigateSection`, plus imperative form layout support; unsupported hosts show a compatibility message rather than an unguarded editor. Current host reference: Burrow-UI `4f7f58f682a0cffe83290276307c66631a361de3`.
+**Add bot** opens Configuration through the shared guard from any workspace. Refresh is available above the workspace contents. Hosts must supply `confirm`, `navigate`, `setDraft`, `setEntitySelector` and `navigateSection`, plus imperative form layout support; unsupported hosts show a compatibility message rather than an unguarded editor. Host implementation checked for this delta: Burrow-UI `aa759fbf429cebd5fe070d3eb28491f63bf5fc77`.
 
-The original four IDs are real sections again. A direct legacy `bots` mount aliases Configuration; `diagnostics` aliases Status. Native hosts validating an unknown old section before mounting fall back to the first valid section, Status, rather than a blank screen.
+Configuration is the first/default workspace. A direct legacy `bots` mount aliases Configuration. Status and its `diagnostics` alias have been removed, with no relocation of their content. Native hosts validating a removed or unknown section fall back to Configuration.
 
 ### Bot setup and save scope
 
@@ -47,18 +46,15 @@ Failed refreshes retain usable data and expose an error. Older reads cannot over
 
 ## Diagnostics and boundaries
 
-Select a bot and open **Status** for Core availability and its reported reason, transport polling mode, last poll, Discord gateway state, and the bounded recent delivery snapshot (including in-flight work). Delivery rows show direction, timestamp, status/error and routing IDs only, never input bodies, answers or credentials. This is read-only and uses the existing Settings refresh cycle. Pending requests include their request time and identifiers; **Chat details and removal** includes the mapping, goblin and session IDs. Admission, routing and token actions remain in their own workspaces and retain their current mutation semantics. Unlike the original October UI, responder selection autosaves and Pause/Resume is immediate; this restoration does not silently reintroduce the old coupled responder/Enabled Save.
+Configuration retains compact connection status, health and reported connection errors. It no longer contains the removed Status workspace's live delivery list, Core availability details or combined mapping/admission summaries. Do not look for those panels in Archive: Archive remains a terminal-outcome history reader.
+
+Pending requests include their request time and identifiers; **Chat details and removal** includes the mapping, goblin and session IDs. Admission, routing and token actions remain in their own workspaces and retain their current mutation semantics. Unlike the original October UI, responder selection autosaves and Pause/Resume is immediate; this restoration does not silently reintroduce the old coupled responder/Enabled Save.
 
 
-**Archive → Mods → Switchboard** contains retained historical work and reply outcomes, not current configuration, admissions or transport health. The native header supports historical bot, category, search and timezone-aware calendar filters; the reader shows safe delivery metadata rather than message bodies or work artifacts. Matching-record statistics are not lifetime totals or unique-conversation counts. History is retained separately from replay buffers and survives bot removal within its documented limits.
+**Archive → Mods → Switchboard** contains retained historical work and reply outcomes, not current configuration, admissions or transport health. The native header supports historical bot, category, search and timezone-aware calendar filters; the reader shows safe delivery metadata rather than message bodies or work artifacts. Matching-record statistics are not lifetime totals or unique-conversation counts. History is retained separately from replay buffers and survives bot removal, up to **10,000 records / 8,000,000 bytes across the mod**. Only terminal delivery outcomes are retained; in-flight work is not included. The older 200-record per-connection replay window cannot reconstruct missing history. Truncation and persistence-warning states mean counts cover retained records only.
 
 There is no manual refresh control in Archive. Visible idle views retry automatically every ten seconds, preserve selection, and mark retained results stale after a read failure. Current configuration, admissions and connection status remain in **Settings → Switchboard**. See [historical Archive semantics](archive-native-acceptance.md).
 
 Connected describes the transport snapshot, not proof of model execution or end-to-end delivery. Fake-DOM tests verify event wiring and lifecycle; real-browser acceptance uses production host assets and synthetic APIs, not real messaging services. The repository retains a dated Settings acceptance receipt; those reported checks are separate from this documentation review.
 
 Host authentication policy is preserved, including intentional authentication-disabled configurations. Protect the operator interface with the host’s controls; write-only tokens do not make an exposed settings endpoint safe.
-
-
-
-
-

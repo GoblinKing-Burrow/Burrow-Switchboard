@@ -79,7 +79,7 @@ A documentation push can therefore trigger the normal release workflow. Use the 
 
 | Source | Documentation responsibility |
 | --- | --- |
-| `burrow.mod.json` | Mod identity/version, Bots Settings registration and Archive diagnostics contribution |
+| `burrow.mod.json` | Mod identity/version, three Settings workspace registrations and historical Archive contribution |
 | `package.json` | Node requirement and check commands |
 | `server/index.mjs` | Activation/cleanup, routes, operator-auth gate, response/error policy |
 | `server/connections.mjs` | Multi-bot registry, scoped stores, migration and connection lifecycle |

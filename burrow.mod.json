@@ -1,7 +1,7 @@
 {
   "id": "burrow-switchboard",
   "name": "Switchboard",
-  "version": "2026.11.05",
+  "version": "2026.11.06",
   "server": "server/index.mjs",
   "ui": {
     "settings": "ui/settings.js",
@@ -9,16 +9,6 @@
   },
   "contributions": {
     "settings": [
-      {
-        "id": "status",
-        "navigation": {
-          "title": "Status"
-        },
-        "primary": {
-          "title": "Status",
-          "capability": "settingsUi"
-        }
-      },
       {
         "id": "configuration",
         "navigation": {

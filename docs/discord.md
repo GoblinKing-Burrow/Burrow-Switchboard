@@ -10,15 +10,15 @@ Switchboard connects outward to Discord's Gateway (WebSocket) and REST API; it d
 
 ## First server or DM
 
-1. In **Settings → Switchboard → Bots**, choose **Add bot → Discord**, enter its name and token, choose who answers new chats, and leave **Receive messages** on. Check the selected bot's connection status or detailed diagnostics in **Archive → Mods → Switchboard**.
-2. Once the gateway observes the server (guild), it appears in **Servers**. Use **Allow server** once for this bot. Visible channels and threads now inherit access without per-channel approval. Discord permission overwrites and private-thread membership still apply.
-3. Send a fresh human mention or reply to the bot in a channel. Each channel/thread has an isolated session and room context. DMs remain individually admitted on the same Bots page; explicit/legacy channel overrides remain supported under collapsed **Channel and thread exceptions**.
-4. Pause/revoke server access to stop inherited routes. Explicit room grants remain independent; disable/remove those separately when needed. Rejected server mutations do not revoke valid in-flight replies.
+1. In **Settings → Switchboard → Configuration**, choose **Add bot → Discord**, enter its name and token, choose who answers new chats, and leave **Receive messages** on. **Archive → Mods → Switchboard** is retained historical work and reply outcomes.
+2. Once the gateway observes the server (guild), it appears in **Pending admissions → Servers**. Use **Allow server** once for this bot. Visible channels and threads now inherit access without per-channel approval. Discord permission overwrites and private-thread membership still apply.
+3. Send a fresh human mention or reply to the bot in a channel. Each channel/thread has an isolated session and room context. DMs remain individually admitted under **Pending admissions**; approved access and explicit/legacy channel overrides are managed under **Chat mappings**, including **Channel and thread exceptions**.
+4. In **Chat mappings → Servers**, pause/revoke server access to stop inherited routes. Explicit room grants remain independent; disable/remove those separately when needed. Rejected server mutations do not revoke valid in-flight replies.
 
 ## Two-bot acceptance checklist (operator-run, not a live verification claim)
 
 1. Create separate applications/connections and assigned goblins; enable Message Content and invite both with suitable Discord permissions.
-2. On **Bots**, approve the observed server for each bot once. Send fresh human mentions to verify replies; do not approve every channel/thread.
+2. Under **Pending admissions → Servers**, approve the observed server for each bot once. Send fresh human mentions to verify replies; do not approve every channel/thread.
 3. Ask bot A for a distinctive fact; wait for its posted reply. Mention bot B and ask what A said. Shared bounded channel context supplies the reply without bot-authored wake loops. Unaddressed guild text remains context only.
 4. Test a second channel and a thread. They inherit access but must not share parent/sibling session history. Invite bots into private threads when Discord requires it.
 5. Restart and verify reconnection and bounded history. Inspect **Archive → Mods → Switchboard**; ambiguous outbound sends are not automatically resent. No repository fixture or mocked test constitutes live provider acceptance.

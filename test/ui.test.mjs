@@ -259,9 +259,8 @@ test.beforeEach(() => { globalThis.document = makeDocument(); globalThis.confirm
 test.afterEach(() => { delete globalThis.document; delete globalThis.confirm; delete globalThis.alert; delete globalThis.prompt; });
 
 for (const overflow of [false, true]) {
-  test(`Four workspaces use the host bot selector (${overflow ? 'overflow' : 'primary'})`, async t => {
+  test(`Three workspaces use the host bot selector (${overflow ? 'overflow' : 'primary'})`, async t => {
     assert.deepEqual(settingsSections, [
-      { id: 'status', label: 'Status', layout: 'form' },
       { id: 'configuration', label: 'Configuration', layout: 'form' },
       { id: 'pending-admissions', label: 'Pending admissions', layout: 'form' },
       { id: 'chat-mappings', label: 'Chat mappings', layout: 'form' },
@@ -282,13 +281,6 @@ for (const overflow of [false, true]) {
     assert.ok(row(f.primary, 'Primary Council'));
     assert.equal(byAttr(f.primary, 'article', 'aria-label', 'Request from Primary Rob'), undefined);
     assert.equal(byTag(f.primary, 'form').length, 0);
-    await f.goSection('status');
-    assert.match(f.primary.textContent, /Approved mappings \(1\)/);
-    assert.match(f.primary.textContent, /Pending admissions \(1\)/);
-    assert.equal(byTag(f.primary, 'select').length, 0);
-    assert.equal(byTag(f.primary, 'form').length, 0);
-    assert.equal(byText(f.primary, 'button', 'Allow chat'), undefined);
-    assert.equal(byText(f.primary, 'button', 'Pause'), undefined);
     await chooseBot(f, 'Alerts');
     assert.match(f.primary.textContent, /Alerts Council/);
     assert.doesNotMatch(f.primary.textContent, /Primary Council/);
@@ -1980,28 +1972,12 @@ test('Bot and chat footers use shared wrapping actions, including autosave retry
 
 
 for (const overflow of [false, true]) {
-  test(`Settings restores current diagnostics without duplicating actions (${overflow ? 'overflow' : 'fallback'})`, async t => {
+  test(`Remaining workspaces retain request and mapping metadata (${overflow ? 'overflow' : 'fallback'})`, async t => {
     const initial = config();
     const state = initial.connections[0];
-    state.coreAgentTurns = { available: false, reason: 'core_external_agent_turns_unavailable' };
     state.pending[0].requestedAt = '2026-10-22T14:00:00Z';
     state.mappings[0].sessionId = 'session-route';
-    state.deliveries = [{ id: 'delivery-live', chatId: 'chat-live', chatTitle: '<script>live</script>', direction: 'outbound', status: 'submitted', at: '2026-10-22T15:01:00Z', sessionId: 'session-live', topicId: 42, agentId: 'hatchet', error: 'provider_timeout', submission: { text: 'PRIVATE_INPUT' }, answer: 'PRIVATE_ANSWER', token: 'PRIVATE_TOKEN' }];
-    const f = setup(t, { initial, overflow });
-    await settle(); await f.goSection('status'); await chooseBot(f, 'Primary');
-    const diagnostics = f.primary;
-    assert.equal(byTag(diagnostics, 'details').length, 0, 'Status is visible without a disclosure');
-    assert.ok(byText(diagnostics, 'h2', 'Status'));
-    assert.match(diagnostics.textContent, /Burrow: Unavailable · core_external_agent_turns_unavailable/);
-    assert.match(diagnostics.textContent, /Activity: active · Last poll:/);
-    assert.ok(diagnostics.textContent.includes(new Date(state.transport.lastPollAt).toLocaleString()));
-    for (const value of ['submitted', 'session-live', 'chat-live', 'delivery-live', 'Topic: 42', 'Goblin ID: hatchet', 'provider_timeout', 'To <script>live</script>']) assert.ok(diagnostics.textContent.includes(value), value);
-    for (const value of ['PRIVATE_INPUT', 'PRIVATE_ANSWER', 'PRIVATE_TOKEN']) assert.ok(!f.root.textContent.includes(value));
-    assert.equal(byTag(diagnostics, 'script').length, 0);
-    assert.deepEqual(byTag(diagnostics, 'button').map(node => node.textContent), ['Refresh']);
-    assert.equal(byTag(f.root, 'button').filter(node => node.textContent === 'Allow chat').length, 0);
-    assert.ok(byText(diagnostics, 'h3', 'Approved mappings (1)'));
-    assert.ok(byText(diagnostics, 'h3', 'Pending admissions (1)'));
+    const f = setup(t, { initial, overflow }); await settle();
     await f.goSection('pending-admissions'); await chooseBot(f, 'Primary');
     const pending = requestRow(f.primary, 'Primary Rob');
     assert.ok(pending.textContent.includes(new Date(state.pending[0].requestedAt).toLocaleString()));
@@ -2013,75 +1989,25 @@ for (const overflow of [false, true]) {
   });
 }
 
-test('Current diagnostics stay bot-scoped through refresh and failed reads', async t => {
-  const initial = config(); initial.connections[1].deliveries = [];
-  initial.connections[1].transport.gateway = 'connected';
-  let fail = false;
-  const f = setupAutoRefresh(t, { initial, onRequest: ({ state }) => { if (fail) throw Error('offline'); return state; } });
-  await settle(); await f.goSection('status'); await chooseBot(f, 'Primary');
-  f.state().connections[0].deliveries[0].status = 'submitted';
-  f.tick(); await settle();
-  assert.match(f.primary.textContent, /submitted/);
-  fail = true; f.tick(); await settle();
-  assert.match(f.primary.textContent, /Could not refresh bots/);
-  assert.match(f.primary.textContent, /submitted/);
-  fail = false; await chooseBot(f, 'Alerts');
-  assert.match(f.primary.textContent, /Gateway: connected/);
-  assert.match(f.primary.textContent, /No recent deliveries/);
-  assert.doesNotMatch(f.primary.textContent, /delivery-default/);
-  await chooseBot(f, 'Primary');
-  assert.match(f.primary.textContent, /delivery-default/);
-  assert.equal(byTag(f.primary, 'details').length, 0);
-  assert.equal(writes(f.calls).length, 0);
-});
-
-test('Current diagnostics tolerate legacy snapshots and missing timestamps without inventing success', async t => {
-  const initial = { name: 'Legacy', core: { available: false, reason: 'legacy_unavailable' }, transport: {}, chatMappings: [{ id: 'legacy-map', chatTitle: 'Legacy room', sessionId: 'legacy-session' }], pendingAdmissions: [{ id: 'legacy-request', chatTitle: 'Visitor' }], recentDeliveries: [{ id: 'legacy-delivery', chatTitle: 'Unknown outcome' }] };
-  const f = setup(t, { initial }); await settle(); await f.goSection('status'); await chooseBot(f, 'Legacy');
-  const diagnostics = f.primary;
-  assert.match(diagnostics.textContent, /Burrow: Unavailable · legacy_unavailable/);
-  assert.match(diagnostics.textContent, /Activity: stopped · Last poll: —/);
-  assert.match(diagnostics.textContent, /unknown · —/);
-  await f.goSection('chat-mappings'); await chooseBot(f, 'Legacy'); await changeChat(f.root, 'Legacy room');
-  assert.match(f.primary.textContent, /Session: legacy-session/);
-});
-
-test('Automatic diagnostics refresh preserves selected text until selection is released', async t => {
-  const f = setupAutoRefresh(t); await settle(); await f.goSection('status'); await chooseBot(f, 'Primary');
-  const diagnostics = named(f.primary, 'article', 'Delivery delivery-default');
+test('Automatic mapping refresh preserves selected text until selection is released', async t => {
+  const f = setupAutoRefresh(t); await settle(); await f.goSection('chat-mappings'); await chooseBot(f, 'Primary');
+  const selected = row(f.primary, 'Primary Council');
   const doc = document, original = doc.getSelection;
-  let selection = { isCollapsed: false, anchorNode: diagnostics.children[1] };
+  let selection = { isCollapsed: false, anchorNode: selected.children[1] };
   document.getSelection = () => selection;
   t.after(() => { doc.getSelection = original; });
   const reads = f.calls.length;
-  f.state().connections[0].deliveries[0].status = 'submitted';
+  f.state().connections[0].mappings[0].enabled = false;
   f.tick(); await settle();
   assert.equal(f.calls.length, reads);
-  assert.equal(named(f.primary, 'article', 'Delivery delivery-default'), diagnostics);
+  assert.equal(row(f.primary, 'Primary Council'), selected);
   selection = { isCollapsed: true };
   f.tick(); await settle();
-  assert.match(f.primary.textContent, /submitted/);
+  assert.match(row(f.primary, 'Primary Council').textContent, /Paused/);
 });
 
-test('Status preserves fallback names, identifiers, updated timestamps and bounded counts', async t => {
-  const initial = config();
-  const state = initial.connections[0];
-  state.bot = { configured: true, displayName: 'Fallback Bot', id: 'fallback-bot-id' };
-  state.deliveries = [{ id: 'delivery-fallback', channelId: 'channel-fallback', agentId: 'missing-agent', updatedAt: '2026-10-22T16:02:00Z' }];
-  state.mappings = [{ id: 'map-fallback', chatId: 'chat-fallback', agentId: 'missing-agent', enabled: false }];
-  state.pending = [{ id: 'request-fallback', chatId: 'request-chat' }];
-  const f = setup(t, { initial, section: 'status' }); await settle(); await chooseBot(f, 'Primary');
-  for (const text of ['Fallback Bot', 'Bot ID: fallback-bot-id', 'channel-fallback', 'delivery-fallback', 'missing-agent', 'chat-fallback', 'request-chat']) assert.ok(f.primary.textContent.includes(text), text);
-  assert.ok(f.primary.textContent.includes(new Date(state.deliveries[0].updatedAt).toLocaleString()));
-  for (const heading of ['Recent delivery diagnostics (1)', 'Approved mappings (1)', 'Pending admissions (1)']) assert.ok(byText(f.primary, 'h3', heading));
-  assert.match(f.primary.textContent, /neither view is a lifetime total/);
-  assert.match(f.primary.textContent, /Connected does not prove successful execution or delivery/);
-  assert.equal(writes(f.calls).length, 0);
-});
-
-
-test('Host Add bot from Status navigates to Configuration and preserves a guarded creation draft', async t => {
-  const f = setup(t, { section: 'status' }); await settle(); await chooseBot(f, 'Alerts');
+test('Host Add bot from Chat mappings navigates to Configuration and preserves a guarded creation draft', async t => {
+  const f = setup(t, { section: 'chat-mappings' }); await settle(); await chooseBot(f, 'Alerts');
   assert.equal(f.host.selector.selectedId, 'alerts');
   await f.goSection('pending-admissions');
   assert.ok(requestRow(f.primary, 'Alerts Rob'));
@@ -2090,31 +2016,30 @@ test('Host Add bot from Status navigates to Configuration and preserves a guarde
   assert.ok(form(f.primary, 'Add bot'));
   assert.equal(f.host.selector.selectedId, '');
   await setValue(input(f.primary, 'switchboard-name'), 'Unsaved new bot', 'input');
-  f.host.decisions.push('stay'); await f.goSection('status');
+  f.host.decisions.push('stay'); await f.goSection('chat-mappings');
   assert.equal(input(f.primary, 'switchboard-name').value, 'Unsaved new bot');
-  f.host.decisions.push('save'); await f.goSection('status');
+  f.host.decisions.push('save'); await f.goSection('chat-mappings');
   assert.equal(writes(f.calls).length, 0, 'invalid creation cannot leave through Save');
   assert.equal(input(f.primary, 'switchboard-name').value, 'Unsaved new bot');
-  f.host.decisions.push('discard'); await f.goSection('status');
+  f.host.decisions.push('discard'); await f.goSection('chat-mappings');
   assert.equal(byTag(f.primary, 'form').length, 0);
   assert.equal(f.host.draft.dirty, false);
   assert.equal(writes(f.calls).length, 0);
 });
 
-for (const [alias, canonical] of [['bots', 'configuration'], ['diagnostics', 'status']]) {
+for (const [alias, canonical] of [['bots', 'configuration']]) {
   test(`Legacy ${alias} alias resolves to ${canonical} without another menu entry`, async t => {
     const f = setup(t, { section: alias }); await settle(); await chooseBot(f, 'Primary');
     assert.equal(settingsSections.some(item => item.id === alias), false);
-    if (canonical === 'configuration') assert.ok(form(f.primary, 'Edit bot'));
-    else { assert.match(f.primary.textContent, /Approved mappings \(1\)/); assert.equal(byTag(f.primary, 'form').length, 0); }
+    assert.ok(form(f.primary, 'Edit bot'));
     assert.equal(writes(f.calls).length, 0);
   });
 }
 
-test('Manifest and imperative Settings declare the same four real workspaces', async () => {
+test('Manifest and imperative Settings declare the same three real workspaces', async () => {
   const manifest = JSON.parse(await readFile(new URL('../burrow.mod.json', import.meta.url), 'utf8'));
   const expected = [
-    ['status', 'Status'], ['configuration', 'Configuration'],
+    ['configuration', 'Configuration'],
     ['pending-admissions', 'Pending admissions'], ['chat-mappings', 'Chat mappings'],
   ];
   assert.deepEqual(settingsSections.map(({ id, label }) => [id, label]), expected);
@@ -2136,7 +2061,7 @@ test('Empty mapping instructions point to admission workspace and pending server
   assert.equal(byAttr(pending.primary, 'section', 'aria-label', 'Allowed servers'), undefined);
 });
 
-test('Status and Chat mappings agree on effective Discord server access and direct exceptions', async t => {
+test('Chat mappings retains effective Discord server access and direct exceptions', async t => {
   const cases = [
     { name: 'enabled inherited channel', server: true, inherited: true, expected: 'Allowed' },
     { name: 'paused inherited server', server: false, inherited: true, expected: 'Server access paused' },
@@ -2159,13 +2084,38 @@ test('Status and Chat mappings agree on effective Discord server access and dire
       chatType: scenario.chatType || 'channel', inherited: scenario.inherited,
       inheritedAgent: false, enabled: scenario.enabled !== false,
     });
-    const f = setup(t, { section: 'status', initial }); await settle(); await chooseBot(f, 'Alerts');
-    const statusRow = byTag(f.primary, 'article').find(article => byText(article, 'strong', 'Alerts Council'));
-    const statusDescription = byTag(statusRow, 'p')[0].textContent;
-    assert.ok(statusDescription.endsWith(` · ${scenario.expected}`), statusDescription);
-    await f.goSection('chat-mappings'); await chooseBot(f, 'Alerts');
+    const f = setup(t, { section: 'chat-mappings', initial }); await settle(); await chooseBot(f, 'Alerts');
     const mappingStatus = byTag(row(f.primary, 'Alerts Council'), 'span').find(node => node.className === 'settings-status');
     assert.equal(mappingStatus.textContent, scenario.expected);
     assert.equal(writes(f.calls).length, 0);
   });
+});
+
+for (const section of ['status', 'diagnostics']) {
+  test(`Removed ${section} direct mount has no content, requests or host side effects`, async () => {
+    const primary = new FakeNode('div');
+    let effects = 0;
+    const unexpected = () => { effects++; };
+    assert.equal(mountSettings({ section, primary: { replace: unexpected }, api: unexpected,
+      confirm: unexpected, navigate: unexpected, setDraft: unexpected,
+      setEntitySelector: unexpected, navigateSection: unexpected }), undefined);
+    await settle();
+    assert.equal(effects, 0);
+    assert.equal(primary.childNodes.length, 0);
+  });
+}
+
+test('Removed Status content is absent from all remaining workspaces', async t => {
+  const initial = config();
+  initial.connections[0].coreAgentTurns = { available: false, reason: 'STATUS_ONLY_CORE_REASON' };
+  initial.connections[0].transport.gateway = 'STATUS_ONLY_GATEWAY';
+  initial.connections[0].deliveries = [{ id: 'STATUS_ONLY_DELIVERY', error: 'STATUS_ONLY_ERROR' }];
+  const f = setup(t, { initial }); await settle(); await chooseBot(f, 'Primary');
+  for (const { id } of settingsSections) {
+    await f.goSection(id);
+    assert.doesNotMatch(f.primary.textContent, /Current bot diagnostics|Recent delivery diagnostics|STATUS_ONLY_|Approved mappings \(\d+\)/);
+    assert.equal(byText(f.primary, 'h2', 'Status'), undefined);
+  }
+  assert.equal(settingsSections[0].id, 'configuration');
+  assert.equal(writes(f.calls).length, 0);
 });
