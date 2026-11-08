@@ -1,6 +1,6 @@
 {
   "name": "burrow-switchboard",
-  "version": "2026.11.07",
+  "version": "2026.11.08",
   "private": true,
   "type": "module",
   "scripts": {
