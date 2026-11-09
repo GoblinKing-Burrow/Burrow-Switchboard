@@ -4,7 +4,7 @@ For Discord applications, intents, permissions and two-bot/thread acceptance, se
 
 ## Before you start
 
-You need an operator-controlled Telegram bot token, Switchboard installed and enabled in Burrow, and at least one enabled Burrow agent. Core must expose `context.agents.turns.submit` and `context.agents.turns.read`; Switchboard reports their availability in Settings. Its Node.js package declares **Node 24 or newer**.
+You need an operator-controlled Telegram bot token, Switchboard installed and enabled in Burrow, and at least one enabled Burrow agent. Core must expose `context.agents.turns.submit` and `context.agents.turns.read`. The mod-local bootstrap/configuration response reports submit/read availability as `coreAgentTurns`; the current Settings layout no longer includes the former live Core-capability panel. Its Node.js package declares **Node 24 or newer**.
 
 Keep the token secret. Do not paste it into chat, screenshots, logs, shell commands, documentation, or a support report. Switchboard stores it through the host secret store and exposes only whether a token is configured. The UI cannot reveal it later.
 

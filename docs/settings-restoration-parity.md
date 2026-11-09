@@ -1,5 +1,7 @@
 # Four-workspace Settings restoration
 
+> Historical implementation/acceptance record. This records the source and checks at the time, not a fresh verification or the current Settings layout. For the current Configuration, Pending admissions, and Chat mappings workspaces, use [Settings](settings.md). The former Core status panel is not part of the current UI.
+
 ## Audited source
 
 - Original four-section source: Switchboard `366b2dd` (also confirmed at `a74a6564d8fa6a892bd0899856f6f256e58d4b2c`).

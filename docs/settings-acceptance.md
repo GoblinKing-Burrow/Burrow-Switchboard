@@ -1,5 +1,7 @@
 # Switchboard Settings contract correction — 2026-10-31
 
+> Historical implementation/acceptance record. This records the source and checks at the time, not a fresh verification or the current Settings layout. For the current Configuration, Pending admissions, and Chat mappings workspaces, use [Settings](settings.md). The former Core status panel is not part of the current UI.
+
 ## Scope and reference
 
 This supersedes the earlier same-day acceptance that treated a primary bot list / supporting editor as a host pattern. That arrangement and its local stylesheet did **not** meet Burrow’s Settings presentation contract. Prior receipts remain historical evidence, not current layout approval.

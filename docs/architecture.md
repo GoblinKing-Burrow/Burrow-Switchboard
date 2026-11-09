@@ -64,7 +64,7 @@ Configuration invalidates network work before draining the worker queue and bloc
 | Host store key | Contents |
 | --- | --- |
 | Settings `configuration` | Telegram polling or Discord gateway enabled flag and nullable default agent |
-| Settings `transport-state` | Health, polling state, last poll time, sanitized error, cached bot identity, and provider-specific cursor/gateway state |
+| Settings `transport-state` | Health, polling state, last poll time, sanitized error, cached bot identity, and the Telegram polling cursor; Discord gateway resume identity/sequence are process-local |
 | Settings `mappings` | Up to 250 approved chat/topic or channel/thread → agent mappings; Discord may include an owned `sessionId` and `historyAfter` boundary |
 | Settings `pending-admissions` | Up to 100 admission requests |
 | Settings `archive-history-v1` (mod-wide) | Retained terminal delivery metadata, up to 10,000 records / 8,000,000 bytes; separate from replay buffers, survives bot removal, excludes message bodies and artifacts |

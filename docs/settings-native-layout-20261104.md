@@ -1,5 +1,7 @@
 # Native Settings inventory layout correction
 
+> Historical implementation/acceptance record. This records the source and checks at the time, not a fresh verification or the current Settings layout. For the current Configuration, Pending admissions, and Chat mappings workspaces, use [Settings](settings.md). The former Core status panel is not part of the current UI.
+
 ## Source and scope
 
 Switchboard baseline: `e368fafc5ccbdd06cd98ff6498ef6fe8d3f992a1`.

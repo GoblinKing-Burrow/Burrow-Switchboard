@@ -1,5 +1,7 @@
 # Restore current diagnostics to Settings
 
+> Historical implementation/acceptance record. This records the source and checks at the time, not a fresh verification or the current Settings layout. For the current Configuration, Pending admissions, and Chat mappings workspaces, use [Settings](settings.md). The former Core status panel is not part of the current UI.
+
 Base: `faed72ac2c03349fcf564b3b038278d0e3287ff1` (2026.11.04.1).
 Compared against the pre-history Archive renderer at `c31e1ddf27b0d453d3f022963471d39b7eea5280`.
 

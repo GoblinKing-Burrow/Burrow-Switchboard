@@ -39,6 +39,10 @@ Full static reconciliation: **2026-11-01**, source commit `e563ebe77e0a98b8a9b1c
 
 Latest delta review: **2026-10-31**, source **2026.10.30**, commit `c38709e5ef3038502757be508b79d302749658e3`: inbound Telegram images, frozen-input recovery and related diagnostics. These features require the corresponding installed Switchboard implementation plus compatible Core/model support; a healthy text route alone does not establish image support. No live provider test was performed.
 
-Last full review: **2026-10-25**, source **2026.10.24.3**, commit `d1388ca8c65e250411034de7560de59d3ffdc875`. This is a source/UI contract review, not a live provider test.
+Earlier full review: **2026-10-25**, source **2026.10.24.3**, commit `d1388ca8c65e250411034de7560de59d3ffdc875`. This is a source/UI contract review, not a live provider test.
 
 The original Telegram-only documentation baseline was source version **2026.10.22.1** (commit `b12d6cb2d9aae46542c55b4da12f605ee8009b34`), inspected **2026-10-22**. This is archival provenance, **not** the current feature list or evidence of live Discord delivery. Verify installed manifest/Core compatibility rather than inferring it from a package date.
+
+## 8 November 2026 full documentation reconciliation
+
+All setup, routing, API, Settings, operations, architecture and development guides were statically checked against transport, connection, history and UI source. Core availability guidance now points to the diagnostic API response rather than the removed Settings panel; Discord resume identity and sequence are identified as process-local. Historical acceptance notes retain their original dates and verification limits. Reviewed source `a63337eb9b7743853e94cb6eea6ca82e7a92fd77` against Core assembly `1f77c9d0277585bfe1963ce3ab3d2cdf35f16b9a`. No application tests, live chat/provider calls, paid generation, runtime edits or skill scripts were run. Documentation checks are separate from application acceptance.
