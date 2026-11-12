@@ -2,9 +2,9 @@
 
 ## Delivery states and uncertain outcomes
 
-An inbound record tracks a Core turn. It can be `submitting`, `processing`, `succeeded`, `failed`, `interrupted` or `delivered`. `succeeded` means Core finished successfully; it is not synonymous with provider delivery. An empty answer yields no outbound message: Telegram leaves the inbound record `succeeded`; Discord marks it `delivered` without posting a message.
+An inbound record tracks a Core turn. It can be `submitting`, `processing`, `succeeded`, `failed`, `interrupted` or `delivered`. `succeeded` means Core finished successfully; it is not synonymous with provider delivery. Image-only results are delivered as uploads. For a result with neither text nor attachments, Telegram preserves the legacy inbound `succeeded` outcome; Discord marks it `delivered` without posting a message.
 
-For a nonempty answer, Switchboard writes an outbound `sending` record **before** calling the provider. Successful sends mark inbound and outbound records `delivered`. A send error produces outbound `unknown`, because a failed response does not establish that the provider received nothing. A `sending` record encountered during later reconciliation becomes `unknown` too.
+For text or image output, Switchboard writes an outbound `sending` record **before** calling the provider. Successful sends mark inbound and outbound records `delivered`. A send error produces outbound `unknown`, because a failed response does not establish that the provider received nothing. A `sending` record encountered during later reconciliation becomes `unknown` too.
 
 **Unknown outcomes are not automatically resent.** This intentionally favors avoiding duplicate messages. Telegram answers are split into 4,000-Unicode-code-point chunks; Discord answers into at most 2,000-UTF-16-unit chunks. Some chunks might have arrived before a later chunk failed. Inspect the provider channel before taking any manual follow-up action. The current UI/API has no retry, replay or delivery-reset operation. A new user message is a new agent turn, not a retry of the old reply, and could repeat side effects.
 
@@ -22,7 +22,7 @@ The Discord worker validates bot identity, connects to the outbound Gateway WebS
 
 Disabling polling/the gateway pauses both ingestion and reconciliation. Clearing the token additionally removes the secret. Existing Core turns are not canceled by those settings actions. Shutdown aborts network work and waits for the service loop/serialized queue to finish.
 
-State survives through host settings/secrets, but collections are bounded. The per-connection 200-record combined delivery limit can remove old Telegram records, including accepted work still pending under enough traffic; frozen uncertain submissions are protected from eviction. If every record is protected, Telegram reports `telegram_backlog_full` and stops ingesting until space is available. Discord protects unresolved and unknown deliveries from eviction and reports `discord_backlog_full` when no completed non-unknown record can be removed; a 4,000,000-byte delivery-state ceiling also applies. Do not treat this initial implementation as an unbounded durable outbox or unlimited audit trail.
+State survives through host settings/secrets, but collections are bounded. The per-connection 200-record combined delivery limit can remove old Telegram records, including accepted work still pending under enough traffic; frozen uncertain submissions are protected from eviction. If every record is protected, Telegram reports `telegram_backlog_full` and stops ingesting until space is available. Discord protects unresolved and unknown deliveries from eviction and reports `discord_backlog_full` when no completed non-unknown record can be removed; a 32,000,000-byte delivery-state ceiling also applies. Do not treat this initial implementation as an unbounded durable outbox or unlimited audit trail.
 
 ## Group, channel and thread quick checks
 
@@ -66,10 +66,31 @@ Include installed mod/Core versions, redacted transport health/error, relevant c
 
 Use a compatible Core with external-turn attachments and choose a model that accepts image input. Telegram sends its ordinary photo variants or an image document; Switchboard selects a practical variant, checks downloaded byte signatures and applies a 20 MiB maximum. Image-only input is supported. The initial admission image is not replayed: send another after approval. Failed download, unsupported type or oversize produces a failed inbound delivery and **does not** submit the caption without its image; inspect the redacted `error` in the mod-local bootstrap/configuration response (Archive shows retained historical outcomes and sanitized error codes). No provider URL, token or bytes are included in public diagnostics.
 
-Pending uncertain Core submissions temporarily retain their exact image bytes and caption in private mod settings for replay; after Core accepts, the frozen copy is cleared. Core retains accepted image artifacts under its own policies. Room context stores only caption/marker text, not images. Disabling a connection aborts an in-flight download; deleting/changing its mapping interrupts pending work but cannot recall an already accepted Core turn. Discord image input, generated images and outbound image replies remain unsupported.
+Pending uncertain Core submissions temporarily retain their exact image bytes and caption in private mod settings for replay; after Core accepts, the frozen copy is cleared. Core retains accepted image artifacts under its own policies. Room context stores only caption/marker text, not images. Disabling a connection aborts an in-flight download; deleting/changing its mapping interrupts pending work but cannot recall an already accepted Core turn. Discord image input and outbound Core image replies on both transports are supported as described below.
 
 ### Image/Core compatibility and interrupted inputs
 
 A first-attempt rejection known to occur before Core admission is terminal for that update: The delivery record contains a sanitized error (available in the mod-local bootstrap/configuration response), and polling continues to later text instead of wedging the bot. `core_image_attachments_unavailable` means Core rejected an image input with its generic input-invalid code; upgrade Core first, but this code alone does not prove a missing feature. Other codes are `core_turn_input_invalid`, `core_image_attachment_too_large`, `core_agent_not_found`, and `core_agent_disabled`.
 
 A lost acceptance response is different: exact frozen input stays pending under the original key, including during temporary Core-capability outages. Disabling/removing or reassigning its mapping interrupts frozen work and clears its stored bytes, even if an older record mislabeled it terminal. This cannot recall a Core turn already accepted. No automatic new-key retry is used for uncertain acceptance.
+
+## Discord images
+
+On an approved DM, send up to four PNG/JPEG/GIF/WebP attachments with or without text; in a guild/channel/thread, include the ordinary human mention/reply to this bot. The total download limit is 20 MiB. Only exact `cdn.discordapp.com` and `media.discordapp.net` HTTPS attachment URLs are accepted; downloads have no bot authorization and reject redirects. Declared/HTTP image MIME must match recognized bytes. A signed CDN URL is not retained as replay input. Approval does not replay an initial admission image: send a fresh message afterward.
+
+`discord_image_download_failed`, `discord_image_unsupported`, `discord_image_too_large`, and `discord_image_too_many` indicate the whole input failed before Core submission, not a caption-only fallback. Fix the input/connectivity and send a fresh message. Uncertain Core submissions keep exact private bytes until accepted or interrupted; mapping removal/reassignment, `/new`, or cancellation clears frozen bytes. Discord also bounds serialized delivery state to 32,000,000 bytes and protects unresolved/unknown work rather than evicting it to fit another image.
+
+## Outbound image replies
+
+Deploy Core's exact-run output attachment descriptors and `context.agents.turns.readAttachment` before expecting image replies. The submit/read health indicator does not test this capability. Use an image-generation-capable Core/model when requesting generation: Switchboard does not generate images itself. Ordinary text-only receipts remain compatible.
+
+Both transports support image-only, text-plus-image and multiple-image results. Limits are ten images, 10 MiB per image and 20 MiB aggregate; supported formats are PNG/JPEG/GIF/WebP. Telegram posts PNG/JPEG as photos, GIF as native animations and WebP as binary documents; Discord needs **Attach Files** as well as ordinary send permissions. Telegram photo processing and provider-specific limits may still reject an upload.
+
+| Error | Meaning and action |
+| --- | --- |
+| `output_attachment_unavailable` | Missing Core read capability, unavailable/expired retained bytes, disabled agent/runtime, or read deadline. Verify Core compatibility and retention; no text-only success is manufactured |
+| `output_attachment_unsupported` | A result contains a non-image artifact or MIME/signature mismatch. Ask for supported images instead; the entire result fails preflight |
+| `output_attachment_too_large` / `output_attachment_too_many` | Reduce output size/count to the limits above |
+| `output_attachment_invalid` | Malformed/mismatched descriptor, filename or base64 response; investigate Core compatibility |
+
+Complete preflight runs before any transport send. These failures are terminal `failed` outcomes with sanitized codes; there is no automatic retry control. Once any send starts, a later error or crash is `unknown`, even if earlier text/images arrived. Check the destination before any manual follow-up; a fresh request may regenerate images or repeat tool side effects. Receipt descriptors can outlive retained bytes, and a job completing after a terminal Core receipt does not retroactively change that receipt. No preview URL fallback is used.

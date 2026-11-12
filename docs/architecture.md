@@ -13,9 +13,10 @@ Telegram message update
   → Core agents.turns.submit (agent, session, message, idempotency key, optional attachments)
   → saved inbound delivery and turn ID
   → later Core agents.turns.read
-  → completed answerText
+  → completed answerText + byte-free attachment descriptors
+  → bounded owned attachment reads and all-artifact preflight
   → saved outbound sending record
-  → Telegram sendMessage
+  → Telegram sendMessage/sendPhoto/sendAnimation/sendDocument (Discord messages + multipart files)
   → record Telegram-confirmed reply chunks in shared room history
   → delivered or unknown
 ```
@@ -43,7 +44,7 @@ The example shows the migrated Telegram default. New Telegram connections prefix
 
 Both transports submit `displayMessage` separately from the attributed, context-enriched model-facing `message`; compatible Core must accept that field. It keeps the human-visible session text distinct from transport context.
 
-Image turns require a Core version supporting external-turn attachments and a selected model configured to accept images; the submit/read availability indicator alone does not prove either. Core persists the attachment in its own agent artifact lifecycle and forwards image input to compatible models. Switchboard checks supported image signatures, limits the Telegram download to 20 MiB (within Core's 30,000,000-character data-URL limit), rejects redirects and never persists or sends the token-bearing download URL as model input. Captions and bytes are not public delivery diagnostics.
+Inbound image turns require a Core version supporting external-turn attachments and a selected model configured to accept images; the submit/read availability indicator alone does not prove either. Core persists the attachment in its own agent artifact lifecycle and forwards image input to compatible models. Switchboard checks supported image signatures, limits the Telegram download to 20 MiB (within Core's 30,000,000-character data-URL limit), rejects redirects and never persists or sends the token-bearing download URL as model input. Captions and bytes are not public delivery diagnostics.
 
 If submit/read are absent on a new input, valid routed input is recorded as failed with `core_external_agent_turns_unavailable`. An already frozen, uncertain submission instead remains pending under its original idempotency key until Core is available; its bytes are not discarded and the polling offset does not advance past it. Approval itself does not establish that Core turns are available.
 
@@ -68,7 +69,7 @@ Configuration invalidates network work before draining the worker queue and bloc
 | Settings `mappings` | Up to 250 approved chat/topic or channel/thread → agent mappings; Discord may include an owned `sessionId` and `historyAfter` boundary |
 | Settings `pending-admissions` | Up to 100 admission requests |
 | Settings `archive-history-v1` (mod-wide) | Retained terminal delivery metadata, up to 10,000 records / 8,000,000 bytes; separate from replay buffers, survives bot removal, excludes message bodies and artifacts |
-| Settings `deliveries` | Up to 200 combined inbound/outbound records per connection; Telegram retains unresolved frozen submissions, and Discord also enforces a 4,000,000-byte bound and protects unresolved/unknown records from eviction |
+| Settings `deliveries` | Up to 200 combined inbound/outbound records per connection; Telegram retains unresolved frozen submissions, and Discord also enforces a 32,000,000-byte bound and protects unresolved/unknown records from eviction |
 | Settings `servers` / `observed-guilds` (Discord connection-scoped) | Up to 250 authorized servers and 250 gateway-observed guilds; observations alone do not grant access |
 | Settings `command-interactions` (Discord connection-scoped) | Up to 200 recent command IDs/statuses; no interaction tokens |
 | Settings `telegram-room-history` (mod-wide, not connection-prefixed) | Up to 100 chat/topic rooms, 50 messages each, 512,000 UTF-8 JSON bytes total; see [routing](routing.md#shared-group-and-channel-conversation-context) |
@@ -113,3 +114,11 @@ agent, so no automatic bot-to-bot wake loop is introduced.
 ## Inherited access
 
 Telegram approvals can inherit connection assignment (`inheritedAgent`); group-root access covers topics without merging their sessions or context. Explicit topic mappings win. Discord `servers` and gateway-owned `observed-guilds` persist per connection; generated `inherited` routes remain server-grant-dependent and isolated per channel/thread. Responder inheritance is separate: `inheritedAgent` (falling back to legacy `inherited`) follows the connection default; a custom responder does not bypass a generated route's server fence. Independently authorized DMs/legacy rooms remain independent even when using the default responder. Revocation fences server-dependent replies, not independent room grants. Operator Settings separates bot identity/credential/default assignment (Configuration), pending requests (Pending admissions) and approved access (Chat mappings), with a shared bot selector; Archive uses the existing mod navigation and native list/detail layout for historical work/outcomes. A separate bounded ledger survives bot deletion; replay buffers remain unchanged. See [historical Archive](archive-native-acceptance.md).
+
+## Outbound image contract
+
+Compatible Core snapshots `turn.result.attachments` as byte-free `{id,name,mimeType,sizeBytes}` descriptors for the exact completed run. Older text receipts may omit the array. Switchboard calls `context.agents.turns.readAttachment(turnId, attachmentId)` and expects `{name,mimeType,sizeBytes,encoding:'base64',content:BASE64}` (raw base64, not a data URL). Core owns receipt authorization, exact-run selection and artifact retention. Switchboard never fetches preview URLs or scans session files.
+
+Before any text/image send, all descriptors and retained bytes are validated: at most ten images, 10 MiB each and 20 MiB aggregate, PNG/JPEG/GIF/WebP signatures matching MIME, canonical base64 and matching descriptor sizes/names. The read waiter has a 30-second total deadline; Core's capability itself has no cancellation parameter, so a late response cannot authorize a send. Missing capability/bytes, unsupported artifacts and invalid/oversize results are failed deliveries, not successful text-only fallbacks. Image bytes are held only for delivery, not copied into the outbound ledger or Archive.
+
+Telegram sends text chunks followed by individual binary uploads: PNG/JPEG via `sendPhoto`, GIF via `sendAnimation` and WebP via `sendDocument`. Discord attaches binary `files[n]` plus `payload_json` to the first message, with allowed mentions disabled and stable nonce enforcement; later text chunks retain the same channel. Both preserve the originating route/topic and reference the originating message only on the first send. The existing write-ahead `sending` record covers the entire result. Any partial/ambiguous send remains unknown and is never automatically resent, including after restart.

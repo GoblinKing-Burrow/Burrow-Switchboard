@@ -4,7 +4,7 @@
 
 **Telegram and Discord in. Goblins out.**
 
-Burrow Switchboard connects approved external chats to real Burrow agent sessions. Telegram supports text and inbound images; Discord supports text. Core executes agent turns for approved routes.
+Burrow Switchboard connects approved external chats to real Burrow agent sessions. Telegram and Discord support text, inbound images and outbound image replies. Core executes agent turns for approved routes.
 
 ## Implemented scope
 
@@ -18,14 +18,14 @@ Burrow Switchboard connects approved external chats to real Burrow agent session
 - Delivery records and duplicate suppression are bounded; ambiguous outbound sends are not blindly resent
 - Native Discord `/help`, `/status`, `/stop`, `/new` and `/model`; see [command prerequisites](docs/discord.md#native-slash-commands)
 - Telegram photos and PNG/JPEG/GIF/WebP image documents (up to 20 MiB) can be sent with a caption or on their own to a compatible, image-capable Core/model
-- Discord attachments, outbound image generation/delivery, voice and streaming are not supported; Telegram has no native command handler
+- Discord PNG/JPEG/GIF/WebP attachments (up to four / 20 MiB aggregate) accept captions or image-only input; both transports upload Core output images as binary files. Voice and streaming are not supported; Telegram has no native command handler
 
 ## Setup
 
 1. Install and enable Switchboard with a compatible Core. Create an operator-owned [Telegram bot](docs/setup.md) or [Discord application/bot](docs/discord.md).
 2. In **Settings → Switchboard → Configuration**, add a named connection, choose its transport, enter its write-only token, assign its goblin and enable transport. Use a separate Discord application per goblin.
 3. Telegram: send text to request access, then approve that bot's group or DM under **Pending admissions**. Topics inherit group access. Discord: approve the observed server once; DM admissions remain separate.
-4. Use **Chat mappings** to manage approved access. Send fresh text or a Telegram image: Telegram groups broadcast when no managed bot is addressed, mentions/replies select recipients; Discord guild channels use mentions/replies. Check **Archive → Mods → Switchboard** for historical work and delivery outcomes.
+4. Use **Chat mappings** to manage approved access. Send fresh text or an image: Telegram groups broadcast when no managed bot is addressed, mentions/replies select recipients; Discord guild channels use mentions/replies. Check **Archive → Mods → Switchboard** for historical work and delivery outcomes.
 
 Telegram group privacy rules still apply. Discord requires the Message Content intent and bot channel/thread permissions; see the [Discord setup and two-bot acceptance checklist](docs/discord.md).
 
@@ -42,4 +42,4 @@ Switchboard is distributed under the [Burrow Sustainable Use License](LICENSE).
 
 ## Documentation
 
-Start with the [Switchboard guide](docs/index.md) for operator setup, admission and routing, Settings, delivery troubleshooting, architecture, the mod-local API and development checks. These pages describe the implemented Telegram text/image and Discord text transports and their distinct delivery boundaries.
+Start with the [Switchboard guide](docs/index.md) for operator setup, admission and routing, Settings, delivery troubleshooting, architecture, the mod-local API and development checks. These pages describe the implemented Telegram and Discord text/image transports and their distinct delivery boundaries.

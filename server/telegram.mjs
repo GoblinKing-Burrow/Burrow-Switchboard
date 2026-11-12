@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { imageType, readOutputImages, outputAttachmentError, validateOutputImage } from './images.mjs';
 import { createRoomHistory, isRoom, telegramSpeaker, quotedReply } from './room-history.mjs';
 
 const MAX_PENDING = 100;
@@ -137,13 +138,6 @@ function imageCandidates(message) {
   }
   return [];
 }
-function imageType(bytes) {
-  if (bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
-  if (bytes.length >= 6 && ['GIF87a', 'GIF89a'].includes(bytes.subarray(0, 6).toString('ascii'))) return 'image/gif';
-  if (bytes.length >= 12 && bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP') return 'image/webp';
-  return null;
-}
 function safeFilePath(value) {
   // No absolute paths, empty/dot segments, percent escapes, slash/backslash
   // tricks, query or fragment; Telegram paths consist of simple relative segments.
@@ -189,7 +183,7 @@ export function createTelegramApi({ token, fetchImpl = fetch }) {
     let response;
     try {
       response = await fetchImpl(`https://api.telegram.org/bot${tokenPath}/${method}`, {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), redirect: 'error', signal,
+        method: 'POST', ...(body instanceof FormData ? { body } : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }), redirect: 'error', signal,
       });
     } catch (error) {
       if (signal?.aborted) throw error;
@@ -227,6 +221,21 @@ export function createTelegramApi({ token, fetchImpl = fetch }) {
         throw new Error('telegram_image_download_failed');
       }
     },
+    sendImage: ({ chatId, topicId = null, image, replyToMessageId = null, signal }) => {
+      validateOutputImage(image);
+      // Use native animation transport for GIFs; WebP remains a document so
+      // neither animation nor unsupported photo formats are silently flattened.
+      const [method, field] = image.mimeType === 'image/gif'
+        ? ['sendAnimation', 'animation']
+        : ['image/png', 'image/jpeg'].includes(image.mimeType)
+          ? ['sendPhoto', 'photo'] : ['sendDocument', 'document'];
+      const body = new FormData();
+      body.set('chat_id', String(chatId));
+      if (topicId !== null && topicId !== undefined) body.set('message_thread_id', String(topicId));
+      if (replyToMessageId !== null && replyToMessageId !== undefined) body.set('reply_parameters', JSON.stringify({ message_id: replyToMessageId, allow_sending_without_reply: true }));
+      body.set(field, new Blob([image.bytes], { type: image.mimeType }), image.name);
+      return call(method, body, { signal });
+    },
     getUpdates: ({ offset = 0, timeout = 15, signal } = {}) => call('getUpdates', { offset, timeout, allowed_updates: ['message'] }, { signal }),
     sendMessage: ({ chatId, topicId = null, text, replyToMessageId = null, signal }) => call('sendMessage', {
       chat_id: chatId, text,
@@ -244,9 +253,10 @@ export function createTelegramConnection({ context, connectionId = 'default', fe
   let pollGeneration = 0;
   let pollController = null;
   let messageController = null;
+  let outputReadController = null;
   let changing = 0;
   function change(operation) {
-    changing += 1; pollGeneration += 1; pollController?.abort(); messageController?.abort(); wake();
+    changing += 1; pollGeneration += 1; pollController?.abort(); messageController?.abort(); outputReadController?.abort(); wake();
     return serialize(operation).finally(() => { changing -= 1; wake(); });
   }
   let queue = Promise.resolve();
@@ -444,10 +454,29 @@ export function createTelegramConnection({ context, connectionId = 'default', fe
       if (turn.status !== 'succeeded') { await replaceDelivery({ ...item, status: turn.status, error: 'agent_turn_failed' }); continue; }
       await replaceDelivery({ ...item, status: 'succeeded' });
       const answer = String(turn.result?.answerText || '').trim();
-      if (!answer) continue;
       const outboundId = `out:${turn.id}`;
       const current = (await deliveries()).find(entry => entry.id === outboundId);
-      if (current && ['sending', 'delivered', 'unknown'].includes(current.status)) continue;
+      if (current && ['sending', 'delivered', 'unknown', 'failed', 'interrupted'].includes(current.status)) {
+        if (current.status !== 'sending') await replaceDelivery({ ...item, status: current.status, error: current.error || null });
+        continue;
+      }
+      let images;
+      const readController = new AbortController();
+      outputReadController = readController;
+      try { images = await readOutputImages(context.agents.turns, turn, AbortSignal.any([signal, readController.signal])); }
+      catch (error) {
+        signal.throwIfAborted();
+        if (readController.signal.aborted) return;
+        const code = outputAttachmentError(error);
+        await replaceDelivery({ id: outboundId, direction: 'outbound', chatId: item.chatId, topicId: item.topicId, agentId: item.agentId, turnId: turn.id, status: 'failed', error: code });
+        await replaceDelivery({ ...item, status: 'failed', error: code });
+        continue;
+      } finally {
+        if (outputReadController === readController) outputReadController = null;
+      }
+      signal.throwIfAborted();
+      if (readController.signal.aborted || changing || !await deliveryRoute(item)) continue;
+      if (!answer && !images.length) continue; // Preserve legacy empty text-result outcome.
       await replaceDelivery({ id: outboundId, direction: 'outbound', chatId: item.chatId, topicId: item.topicId, chatTitle: item.chatTitle, chatType: item.chatType, agentId: item.agentId, turnId: turn.id, status: 'sending', at: nowIso(clock) });
       try {
         let first = true;
@@ -463,6 +492,12 @@ export function createTelegramConnection({ context, connectionId = 'default', fe
               username: bot?.username || null, kind: 'bot', agentId: item.agentId, connectionId,
             });
           }
+          first = false;
+        }
+        for (const image of images) {
+          signal.throwIfAborted();
+          if (!await deliveryRoute(item)) return;
+          await api.sendImage({ chatId: item.chatId, topicId: item.topicId, image, replyToMessageId: first ? item.telegramMessageId : null, signal });
           first = false;
         }
         await replaceDelivery({ id: outboundId, status: 'delivered', error: null });

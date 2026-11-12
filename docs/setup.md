@@ -57,7 +57,7 @@ Telegram group instructions were rechecked **2026-10-25** against official docum
 
 On an approved route, send a photo or a PNG/JPEG/GIF/WebP image document up to 20 MiB, with or without a caption. Use the same group mention/reply rules to choose recipients; an untargeted group image can reach every admitted bot that receives it. Each album item is handled as a separate update/turn. The original admission image is not replayed after approval.
 
-Install a Switchboard build containing inbound-image support and a Core build that accepts external-turn attachments, with an image-capable selected model. The submit/read availability indicator only checks the underlying turn APIs. See [image troubleshooting](operations.md#telegram-images) for download errors, compatibility failures and uncertain submissions. Discord attachments and outbound image replies remain unsupported.
+Install a Switchboard build containing inbound-image support and a Core build that accepts external-turn attachments, with an image-capable selected model. The submit/read availability indicator only checks the underlying turn APIs. See [image troubleshooting](operations.md#telegram-images) for download errors, compatibility failures and uncertain submissions. Discord also accepts image attachments, and both transports upload Core output images; see [image replies](operations.md#outbound-image-replies).
 
 ## Safe first test
 

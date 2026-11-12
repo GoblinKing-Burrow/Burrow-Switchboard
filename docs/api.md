@@ -74,3 +74,7 @@ Validation order can affect which error is returned; for example approval valida
 ## Historical work: `GET /archive`
 
 Read-only, operator-authenticated and `cache-control: no-store`. Returns `{ ok, records, coverage, warning? }`. Records are allowlisted terminal delivery metadata, keyed by connection and original delivery ID, not current configuration or replay inputs. Coverage includes `kind: retained`, `count`, `limit`, `byteLimit`, `startedAt`, `legacyImported` and `truncated`. The optional `archive_capture_failed` warning means known persistence problems may have left gaps. Dates are present only when actually recorded. See [history semantics and migration](archive-native-acceptance.md).
+
+### Image delivery diagnostics
+
+`coreAgentTurns.available` still checks only submit/read, not output attachment retrieval. Image output additionally requires `context.agents.turns.readAttachment(turnId, attachmentId)` against Core's exact-run `result.attachments` descriptors. Public responses omit frozen inbound bytes and never include output bytes or CDN/preview credentials. `output_attachment_*` codes are terminal preflight failures; `unknown` after send admission can represent partial text/image delivery and is not automatically replayed. See [operations](operations.md#outbound-image-replies) for limits and sanitized codes; no image-specific UI or replay endpoint is added.
