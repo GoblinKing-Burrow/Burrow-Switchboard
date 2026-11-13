@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "releaseDate": "2026.11.12",
+  "releaseDate": "2026.11.13",
   "sources": {
-    "burrow": "e2f6c49c9d449bced1d18244b2551e9fee9a7755",
+    "burrow": "e1ee2ed7d947c4f92174b9693f9df35d337f9d06",
     "burrowBackend": "f589673df9124a459617f76230e90d021577a067",
     "burrowUi": "f86bf45bf239606da23e6cf8bc370495e81eda88",
     "nodeGoblin": "a496460f44108c2e6eae8a2232629b647c64355a",
