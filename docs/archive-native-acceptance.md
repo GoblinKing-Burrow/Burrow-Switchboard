@@ -1,5 +1,7 @@
 # Historical Switchboard Archive
 
+> **Historical acceptance record:** the execution results, draft-PR instructions and release blockers below describe the original review, not a new test run or the status of the current release. The 15 November 2026 documentation pass checked current source statically; it did not rerun these benchmarks or establish live Core-storage/browser acceptance. Current operator guidance is in [Operations](operations.md) and [Settings](settings.md).
+
 This replaces the earlier current-configuration diagnostics design. Settings owns bots, credentials, access, pending admissions and current health. Archive shows historical received-work and reply outcomes only, through the existing host header, calendar, search, list and reader.
 
 ## Data and scope
@@ -49,3 +51,4 @@ A separate cloned in-memory settings benchmark at 10,000 records measured direct
 Failed captures retain bounded, sanitized ordered observations alongside the shared in-process writer queue. Later captures (including another bot's write) and snapshot retries apply those observations with their original ordering authority, so a same-timestamp `delivered` outcome replaces an already-persisted `succeeded` outcome. Snapshot-only rows still cannot win timestamp ties. Pending observations clear only after successful persistence and use the same record/byte retention limits; no frozen inputs or image bodies are queued. The persisted history-gap warning remains after recovery.
 
 Regressions cover failed snapshot retries, nonterminal-write recovery, multiple failed transitions, cross-bot/instance recovery, stale snapshot rejection, and restart after a successful retry. These observations are in-memory, not a durable write-ahead log: process death before successful recovery can still lose ordering evidence and history; the gap warning documents that limitation. Existing Core load and rendered-browser release gates remain unchanged.
+

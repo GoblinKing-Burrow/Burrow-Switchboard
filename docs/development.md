@@ -2,11 +2,13 @@
 
 ## Baseline and scope
 
-Latest delta source review **2026-11-12**: version **2026.11.11.2**, commit `bbafd8a77ba5a69c48c4c3180ab4fcd23b49b0df`. Compared Discord inbound-image handling, exact-run Core output reads, bounded all-image preflight, native Telegram GIF uploads, binary Discord delivery and interruption/uncertainty behavior with implementation and static test definitions. This documentation pass did not execute application tests or contact Telegram, Discord or model providers.
+Full static documentation review **2026-11-15**: version **2026.11.11.2**, commit `89ddd0f2bf6cc2397271e86071a48c20f868e889`. All ten guides were checked against the current route registrations, connection lifecycle, Telegram/Discord routing and recovery, image bounds, Archive retention and UI contracts. The routing table now explicitly includes Discord image-only input, and the original Archive acceptance record is marked historical. No application tests or live provider calls were executed. Documentation build/link and deployment checks are recorded separately.
+
+Historical delta source review **2026-11-12**: version **2026.11.11.2**, commit `bbafd8a77ba5a69c48c4c3180ab4fcd23b49b0df`. Compared Discord inbound-image handling, exact-run Core output reads, bounded all-image preflight, native Telegram GIF uploads, binary Discord delivery and interruption/uncertainty behavior with implementation and static test definitions. This documentation pass did not execute application tests or contact Telegram, Discord or model providers.
 
 Historical delta source review **2026-10-31**: version **2026.10.30**, commit `c38709e5ef3038502757be508b79d302749658e3`. The image ingestion, caption routing, bounded download, frozen-input recovery and terminal pre-admission error paths were compared with source and test declarations. No application tests or live provider calls were executed for this documentation pass.
 
-Last full source review **2026-10-25**: version **2026.10.24.3**, commit `d1388ca8c65e250411034de7560de59d3ffdc875`. All operator and developer pages were reconciled with runtime, UI, manifest, test source and release workflow. This pass did not execute application tests or contact live bot/model providers.
+Historical full source review **2026-10-25**: version **2026.10.24.3**, commit `d1388ca8c65e250411034de7560de59d3ffdc875`. All operator and developer pages were reconciled with runtime, UI, manifest, test source and release workflow. This pass did not execute application tests or contact live bot/model providers.
 
 Historical Telegram-only documentation baseline: version **2026.10.22.1**, commit `b12d6cb2d9aae46542c55b4da12f605ee8009b34`, reviewed **2026-10-22**. This is archival history, not the current scope or live verification. Compare installed source behavior and host capabilities, not dates alone.
 
@@ -104,3 +106,4 @@ The hero in `docs/assets/hero.png` is the user-selected joint-effort Snickerdink
 ## Publication history
 
 The earlier pre-publication reconciliation at `056f0749542e92cfe6b2346b6ef7c6f268b5e4e7` (version **2026.10.22.2**) concerned the Telegram-only baseline and hero image. It does not describe the subsequent Discord implementation. The historical documentation pass did not claim a live provider test or alter runtime/release policy. Current image tests likewise use controlled local providers, not live Telegram/model credentials.
+

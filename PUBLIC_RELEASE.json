@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "releaseDate": "2026.11.15",
+  "releaseDate": "2026.11.16",
   "sources": {
-    "burrow": "9543a5d833edfee36d83ad3b9529f2220fa9540d",
-    "burrowBackend": "963a1d71d53d84dd059e8da0ca019c92b2786038",
-    "burrowUi": "a84feff016dc92ed6835d7ba3316defb22d2da30",
-    "nodeGoblin": "6c17898dcb2bec5b751459a434ac0bdd35c7ff60",
-    "goblinSecretStore": "18f1a44d60e4ed4f49767a252cab2fb316f3313e",
-    "burrowSkills": "dc3586763e828052ade31700691445aa69f6f406",
+    "burrow": "a0f6c6687c8460706a7fc07b0da87b4637dafb34",
+    "burrowBackend": "1c56e8f6599ac381b02f93f06b1e4b4843f5e2e8",
+    "burrowUi": "d5843f6effcdc2f8c24435e3e7faeac7ae795205",
+    "nodeGoblin": "8ad9d1566fd4e7a8d2fc806f9937b21c7fa6839d",
+    "goblinSecretStore": "00479e6d80686a5b8078611b59f7ea149de8a7f5",
+    "burrowSkills": "9ce98c4a5e11e286bde6797c8b286e66caccf7b3",
     "burrowBackdoor": "2a457afee7fee6836c9723af01b845a2cd56721c",
-    "burrowTutor": "e6b21379682d9c3942fa2f978391665bddca07c9",
+    "burrowTutor": "060f6551229d17c84f8002cbdfdc2710ee18051b",
     "burrowTheater": "81a55a78c7e3f35174e53dae6eab78fd5bbaeedc",
-    "burrowSwitchboard": "89ddd0f2bf6cc2397271e86071a48c20f868e889"
+    "burrowSwitchboard": "db10042caabe83fd0efd5569e63fb17c5afb9d4a"
   }
 }

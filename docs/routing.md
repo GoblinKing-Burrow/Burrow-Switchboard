@@ -20,8 +20,8 @@ A nonempty text message or image from an unknown Telegram DM/group, or a text/im
 | --- | --- |
 | Telegram direct chat | Every approved nonempty text message or photo/image-document (with or without caption); group recipient selection does not apply |
 | Telegram approved group root or inherited forum topic | Human text or image with no known managed-bot target goes to every admitted managed bot that received it; known bot targets select only those bots |
-| Discord DM | Every approved nonempty human text message |
-| Discord authorized-server channel/thread or explicit guild mapping | Human text mentioning that bot or replying to its message |
+| Discord DM | Approved human text or supported image attachments, including image-only messages; no mention required |
+| Discord authorized-server channel/thread or explicit guild mapping | Human text or supported images mentioning that bot or replying to its message |
 | Disabled explicit mapping | Nothing; it does not fall through to inherited access or return to pending admissions |
 
 ### Telegram group recipient selection
@@ -75,5 +75,6 @@ Only approved, enabled routes contribute inbound history. Disabling/deleting acc
 Discord independently persists bounded history per guild+channel across approved bots; a thread ID is its own room. DMs are connection-isolated. On authorized or explicitly approved guild routes, human text and observed bot/webhook text can be context while only a human mention/reply starts a turn. Discord uses the same 100-room, 50-message, 4,000-UTF-16-unit, 512,000-byte total and 16,000-byte submission-context limits.
 
 Only text/markers are shared in room history, not image bytes or file URLs. The complete submission, including the downloaded image bytes and caption, is frozen in private settings before Core submission so an uncertain submission can replay the same input after restart even if room history changes. These pending inputs are internal state and omitted from public delivery diagnostics. The 200-record connection limit still bounds recovery.
+
 
 
