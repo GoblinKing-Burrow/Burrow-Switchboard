@@ -1,3 +1,4 @@
+import { waitForTransport } from './transport-wait.mjs';
 import { createHash } from 'node:crypto';
 import { readOutputImages, outputAttachmentError, validateOutputImage, OUTPUT_IMAGE_LIMITS } from './images.mjs';
 import { downloadDiscordImages } from './discord-images.mjs';
@@ -63,14 +64,14 @@ export function createDiscordApi({ token, fetchImpl = fetch } = {}) {
     for (let attempt = 0; ; attempt++) {
       let response;
       try {
-        response = await fetchImpl(`${API}${path}`, {
+        response = await waitForTransport(requestSignal, () => fetchImpl(`${API}${path}`, {
           method, headers: { ...(!anonymous ? { Authorization: `Bot ${token}` } : {}), ...(body instanceof FormData ? {} : { 'content-type': 'application/json' }) },
           ...(body === undefined ? {} : { body: body instanceof FormData ? body : JSON.stringify(body) }), redirect: 'error', signal: requestSignal,
-        });
+        }));
       } catch { throw new Error('discord_request_failed'); }
       if (response.status === 401 || response.status === 403) throw new Error('discord_auth_failed');
       if (response.status === 429) {
-        let payload; try { payload = await response.json(); } catch {}
+        let payload; try { payload = await waitForTransport(requestSignal, () => response.json()); } catch {}
         const seconds = Number(payload?.retry_after ?? response.headers?.get?.('retry-after'));
         // Discord explicitly rejected this request: retry is safe, unlike a timeout/5xx on POST.
         if (deadline > 3000 && attempt < 2 && Number.isFinite(seconds) && seconds >= 0 && seconds <= 10) {
@@ -83,7 +84,7 @@ export function createDiscordApi({ token, fetchImpl = fetch } = {}) {
         throw new Error('discord_request_failed');
       }
       if (response.status === 204) return null;
-      try { return await response.json(); } catch { throw new Error('discord_response_invalid'); }
+      try { return await waitForTransport(requestSignal, () => response.json()); } catch { throw new Error('discord_response_invalid'); }
     }
   }
   const channelPath = id => { if (!snowflake(id)) fail('discord_response_invalid'); return `/channels/${id}`; };
@@ -602,7 +603,8 @@ export function createDiscordConnection(options = {}) {
         if (!parts.length && images.length) parts.push('');
         for (const part of parts) {
           if (!await active(gen) || !await mappingFor(item) || !valid(gen)) return;
-          const posted = await api.sendMessage({ channelId: item.channelId, chatId: item.channelId, text: part, ...(index === 0 && images.length ? { images } : {}), replyToMessageId: index === 0 ? item.messageId : null, nonce: hash(`${connectionId}:${turn.id}:${index}`), signal });
+          const sendSignal = AbortSignal.any([signal, AbortSignal.timeout(15_000)]);
+          const posted = await waitForTransport(sendSignal, () => api.sendMessage({ channelId: item.channelId, chatId: item.channelId, text: part, ...(index === 0 && images.length ? { images } : {}), replyToMessageId: index === 0 ? item.messageId : null, nonce: hash(`${connectionId}:${turn.id}:${index}`), signal: sendSignal }));
           if (!valid(gen)) return;
           if (snowflake(posted?.id)) await history.record(route, { ...posted, content: part, author: { ...(identity || (await transport()).bot || {}), bot: true } }, connectionId);
           index++;
@@ -835,9 +837,10 @@ export function createDiscordConnection(options = {}) {
     await put('mappings', routes.filter(item => item.id !== id)); await put('pending-admissions', (await pending()).filter(item => item.id !== id)); return publicState();
   }
   function start() { if (!closed && !started) { started = true; launch(); } return Promise.resolve(); }
-  async function close() { closed = true; invalidate(); await queue; await state({ health: 'stopped', polling: 'stopped', gateway: 'stopped' }); }
+  function stop() { if (!closed) { closed = true; invalidate(); } }
+  async function close() { stop(); await queue; await state({ health: 'stopped', polling: 'stopped', gateway: 'stopped' }); }
   return Object.freeze({
-    start, close, publicState: () => serialize(publicState), configure: input => change(() => configure(input)), clearToken: () => change(clearToken),
+    start, stop, close, publicState: () => serialize(publicState), configure: input => change(() => configure(input)), clearToken: () => change(clearToken),
     configureServer: async (guildId, input) => {
       if (!snowflake(guildId)) fail('server_invalid');
       const value = object(input, ['enabled'], 'server_invalid');

@@ -13,7 +13,7 @@ Telegram supports text and inbound photos or PNG/JPEG/GIF/WebP image documents; 
 | Operator-managed Telegram polling and Discord Gateway/REST, named bot connections | Other providers or inbound webhooks |
 | Per-bot group/server authorization, inherited topic/channel/thread access and explicit room mappings | Unapproved group/server access, user-level allowlists, permanent deny list |
 | Core external-agent-turn submission and reconciliation | A separate model runner, tool system or Tutor capability |
-| Inbound Telegram images up to 20 MiB; Discord up to four images / 20 MiB aggregate; outbound image replies on both transports; native Discord slash controls | Voice, streaming replies, non-image artifacts |
+| Inbound Telegram images up to 20 MiB; Discord up to four images / 20 MiB aggregate; outbound image replies on both transports; native Telegram and Discord slash controls | Voice, streaming replies, non-image artifacts |
 | Durable bounded room context and delivery records | Unlimited audit history, manual replay or retry |
 
 An approved group/topic or guild channel/thread is a shared route: approval is **not** a separate approval of each participant. Choose an agent whose capabilities are appropriate for everyone who can address the bot there. External messages enter the real agent pipeline; approval is not a guarantee that the message is safe or authorized for every tool action.

@@ -232,8 +232,7 @@ test('one stuck poller does not block another bot, and removal discards late res
   const state = await service.publicState(); assert.equal(state.connections[1].pending.length, 0);
   assert.equal(f.settings.get(`connection-${id}-transport-state`).offset, 12);
   releases.get('one-token')([]);
-  // Keep fake fetch abortable during the final drain.
-  const closing = service.close(); await settle(); releases.get('one-token')([]); releases.get('two-token')([]); await closing;
+  await service.close(); // Neither fetch mock needs to cooperate with shutdown.
 });
 
 test('removing a bot aborts a blocked reconciliation send before draining its worker', { timeout: 2000 }, async () => {
@@ -526,4 +525,44 @@ test('mixed transport registry preserves Telegram and isolates Discord identity,
   assert.equal(remaining.some(item => item.id === h.id), false);
   assert.doesNotMatch(JSON.stringify(await service.publicState()), /discord-h|discord-s|telegram-secret/);
   await service.close();
+});
+
+test('aggregate shutdown releases a stuck send before draining and rejects further admissions', { timeout: 2500 }, async () => {
+  const f = fixture({ turnResult: { id: 'turn-1', status: 'succeeded', result: { answerText: 'pending reply' } } });
+  let sendEntered, sendSignal;
+  const entered = new Promise(resolve => { sendEntered = resolve; });
+  const service = createSwitchboardService({ context: f.context });
+  f.settings.set('mappings', [{ id: telegramRouteId('42'), chatId: '42', topicId: null, chatType: 'direct', agentId: 'hatchet', enabled: true }]);
+  f.settings.set('pending-admissions', [{ id: 'admission', chatId: '77', chatType: 'direct' }]);
+  f.settings.set('deliveries', [{ id: 'in:1', direction: 'inbound', chatId: '42', topicId: null, agentId: 'hatchet', turnId: 'turn-1', status: 'processing' }]);
+  const delivery = assert.rejects(service.reconcile({ sendMessage: ({ signal }) => {
+    sendSignal = signal;
+    sendEntered();
+    return new Promise(() => {}); // Ignores abort entirely.
+  } }), /service_shutdown/);
+  await entered;
+  const queued = assert.rejects(service.approve('admission', { agentId: 'hatchet' }), /service_shutdown/);
+  const closing = service.close();
+  assert.strictEqual(service.close(), closing);
+  await assert.rejects(service.approve('admission', { agentId: 'hatchet' }), /service_shutdown/);
+  await Promise.all([delivery, queued, closing]);
+  assert.equal(sendSignal.aborted, true);
+  assert.equal(f.settings.get('pending-admissions').length, 1);
+  assert.equal(f.settings.get('deliveries').find(row => row.direction === 'outbound').status, 'sending', 'uncertain write-ahead is retained for restart');
+});
+
+test('aggregate shutdown cancels an in-flight bot identity check before draining configuration', { timeout: 2500 }, async () => {
+  const f = fixture();
+  let resolveEntered;
+  const entered = new Promise(resolve => { resolveEntered = resolve; });
+  const service = createSwitchboardService({ context: f.context, fetchImpl: (_, init) => {
+    resolveEntered(init.signal);
+    return new Promise(() => {});
+  } });
+  const configuring = assert.rejects(service.configure({ token: 'fixture-token', enabled: true }), /service_shutdown/);
+  const signal = await entered;
+  await service.close();
+  await configuring;
+  assert.equal(signal.aborted, true);
+  assert.equal(f.secrets.size, 0);
 });

@@ -21,7 +21,7 @@ Telegram message update
   → delivered or unknown
 ```
 
-Switchboard does not directly call a model provider or run a parallel tool loop. It submits a real agent turn to Core. Telegram and Discord are implemented behind separate workers with a shared connection registry; ordinary message routing uses the existing external-turn contract and neither transport requires Tutor integration. Discord commands additionally require the Core APIs listed below.
+Switchboard does not directly call a model provider or run a parallel tool loop. It submits a real agent turn to Core. Telegram and Discord are implemented behind separate workers with a shared connection registry; ordinary message routing uses the existing external-turn contract and neither transport requires Tutor integration. Telegram and Discord commands additionally require the Core APIs listed below.
 
 ## Host capabilities
 
@@ -48,9 +48,9 @@ Inbound image turns require a Core version supporting external-turn attachments 
 
 If submit/read are absent on a new input, valid routed input is recorded as failed with `core_external_agent_turns_unavailable`. An already frozen, uncertain submission instead remains pending under its original idempotency key until Core is available; its bytes are not discarded and the polling offset does not advance past it. Approval itself does not establish that Core turns are available.
 
-### Additional Discord command capabilities
+### Additional command capabilities
 
-`/stop` needs `context.agents.turns.cancel`. `/new` needs `context.agents.sessions.create`; `/model` needs `context.agents.sessions.model`, `setModel`, and `context.models.list` for choices. `/new` persists the returned owned session ID and a history boundary on the mapping. Ordinary messaging still uses submit/read; command availability must not be inferred from the Core turns indicator. See [commands](discord.md#native-slash-commands).
+`/stop` needs `context.agents.turns.cancel`. `/new` needs `context.agents.sessions.create`; `/model` needs `context.agents.sessions.model`, `setModel`, and `context.models.list` for choices. `/new` persists the returned owned session ID and a history boundary on the mapping. Ordinary messaging still uses submit/read; command availability must not be inferred from the Core turns indicator. See [Telegram commands](setup.md#native-slash-commands) and [Discord commands](discord.md#native-slash-commands).
 
 ## Multiple bot connections
 
@@ -66,11 +66,12 @@ Configuration invalidates network work before draining the worker queue and bloc
 | --- | --- |
 | Settings `configuration` | Telegram polling or Discord gateway enabled flag and nullable default agent |
 | Settings `transport-state` | Health, polling state, last poll time, sanitized error, cached bot identity, and the Telegram polling cursor; Discord gateway resume identity/sequence are process-local |
-| Settings `mappings` | Up to 250 approved chat/topic or channel/thread → agent mappings; Discord may include an owned `sessionId` and `historyAfter` boundary |
+| Settings `mappings` | Up to 250 approved chat/topic or channel/thread → agent mappings; may include an owned session ID and history boundary (per exact chat/topic within a Telegram grant) |
 | Settings `pending-admissions` | Up to 100 admission requests |
 | Settings `archive-history-v1` (mod-wide) | Retained terminal delivery metadata, up to 10,000 records / 8,000,000 bytes; separate from replay buffers, survives bot removal, excludes message bodies and artifacts |
 | Settings `deliveries` | Up to 200 combined inbound/outbound records per connection; Telegram retains unresolved frozen submissions, and Discord also enforces a 32,000,000-byte bound and protects unresolved/unknown records from eviction |
 | Settings `servers` / `observed-guilds` (Discord connection-scoped) | Up to 250 authorized servers and 250 gateway-observed guilds; observations alone do not grant access |
+| Settings `telegram-command-updates` (Telegram connection-scoped) | Up to 200 completed command update IDs to avoid executing or replying again after an uncertain send |
 | Settings `command-interactions` (Discord connection-scoped) | Up to 200 recent command IDs/statuses; no interaction tokens |
 | Settings `telegram-room-history` (mod-wide, not connection-prefixed) | Up to 100 chat/topic rooms, 50 messages each, 512,000 UTF-8 JSON bytes total; see [routing](routing.md#shared-group-and-channel-conversation-context) |
 | Settings `discord-room-history` (mod-wide) | Bounded guild/channel history shared across approved Discord bots; thread IDs are separate rooms; DMs connection-isolated |

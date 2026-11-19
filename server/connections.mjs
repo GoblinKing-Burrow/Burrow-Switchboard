@@ -4,7 +4,7 @@ import { createRoomHistory } from './room-history.mjs';
 import { createTelegramApi, createTelegramConnection } from './telegram.mjs';
 import { createDiscordApi, createDiscordConnection } from './discord.mjs';
 
-const STATE_KEYS = ['configuration', 'transport-state', 'mappings', 'pending-admissions', 'deliveries', 'servers', 'observed-guilds', 'command-interactions'];
+const STATE_KEYS = ['configuration', 'transport-state', 'mappings', 'pending-admissions', 'deliveries', 'servers', 'observed-guilds', 'command-interactions', 'telegram-command-updates'];
 const fail = (message, statusCode = 400) => { throw Object.assign(new Error(message), { statusCode }); };
 function inputObject(input, allowed) {
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !allowed.includes(key))) fail('connection_invalid');
@@ -29,9 +29,11 @@ export function createSwitchboardService(options = {}) {
   const kinds = new Map();
   let queue = Promise.resolve();
   let started = false;
-  let closed = false;
+  let closing;
+  const controller = new AbortController();
   const serialize = operation => {
-    const result = queue.then(operation, operation);
+    if (controller.signal.aborted) return Promise.reject(controller.signal.reason);
+    const result = queue.then(() => { controller.signal.throwIfAborted(); return operation(); });
     queue = result.catch(() => {});
     return result;
   };
@@ -69,6 +71,7 @@ export function createSwitchboardService(options = {}) {
   }
   function worker(id) {
     if (!workers.has(id)) {
+      controller.signal.throwIfAborted();
       const scoped = {
         ...context,
         settings: {
@@ -110,7 +113,7 @@ export function createSwitchboardService(options = {}) {
         ? createDiscordConnection({ ...options, context: scoped, connectionId: id, discordHistorySettings: context.settings })
         : createTelegramConnection({ ...options, context: scoped, connectionId: id, roomHistory, telegramBots });
       workers.set(id, service);
-      if (started && !closed) service.start();
+      if (started && !controller.signal.aborted) service.start();
     }
     return workers.get(id);
   }
@@ -145,8 +148,8 @@ export function createSwitchboardService(options = {}) {
   }
   async function identity(token, kind = 'telegram') {
     let bot;
-    try { bot = await (kind === 'discord' ? createDiscordApi : createTelegramApi)({ token, fetchImpl }).getMe({ signal: AbortSignal.timeout(15_000) }); }
-    catch (error) { fail([`${kind}_auth_failed`, `${kind}_rate_limited`].includes(error.message) ? error.message : `${kind}_token_validation_failed`); }
+    try { bot = await (kind === 'discord' ? createDiscordApi : createTelegramApi)({ token, fetchImpl }).getMe({ signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]) }); }
+    catch (error) { controller.signal.throwIfAborted(); fail([`${kind}_auth_failed`, `${kind}_rate_limited`].includes(error.message) ? error.message : `${kind}_token_validation_failed`); }
     if (kind === 'discord') {
       if (typeof bot?.id !== 'string' || !/^\d{1,32}$/.test(bot.id) || bot.bot !== true) fail('discord_response_invalid');
       return { id: bot.id, username: bot.username || null, displayName: bot.global_name || bot.username || null, bot: true };
@@ -262,16 +265,22 @@ export function createSwitchboardService(options = {}) {
   });
   function start() {
     return serialize(async () => {
-      if (closed) return;
       try { await archiveState(); } catch { await markArchiveFailure(); }
       started = true;
-      for (const item of await registry()) worker(item.id).start();
+      for (const item of await registry()) {
+        if (controller.signal.aborted) return;
+        worker(item.id).start();
+      }
     });
   }
-  async function close() {
-    closed = true;
-    await queue;
-    await Promise.all([...workers.values()].map(service => service.close()));
+  function close() {
+    if (closing) return closing;
+    controller.abort(Object.assign(new Error('service_shutdown'), { statusCode: 409 }));
+    // An admitted operation can be queued behind worker I/O. Signal workers
+    // before awaiting that operation; persist their final state after it drains.
+    for (const service of workers.values()) service.stop();
+    closing = queue.then(() => Promise.all([...workers.values()].map(service => service.close())));
+    return closing;
   }
   return Object.freeze({
     start, close,

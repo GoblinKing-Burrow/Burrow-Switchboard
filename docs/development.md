@@ -12,7 +12,7 @@ Historical full source review **2026-10-25**: version **2026.10.24.3**, commit `
 
 Historical Telegram-only documentation baseline: version **2026.10.22.1**, commit `b12d6cb2d9aae46542c55b4da12f605ee8009b34`, reviewed **2026-10-22**. This is archival history, not the current scope or live verification. Compare installed source behavior and host capabilities, not dates alone.
 
-The current implementation covers text and inbound images on Telegram and Discord, outbound Core image replies on both transports, and native Discord slash commands. Telegram broadcast/targeting, group-root access and Discord server inheritance are covered by dedicated routing/access suites. Voice, streaming, non-image output artifacts, durable user-level denial, manual replay and other transports are not delivered features. Do not infer them from the product name or adapter-oriented design.
+The current implementation covers text and inbound images on Telegram and Discord, outbound Core image replies on both transports, and native slash commands on both transports. Telegram broadcast/targeting, group-root access and Discord server inheritance are covered by dedicated routing/access suites. Voice, streaming, non-image output artifacts, durable user-level denial, manual replay and other transports are not delivered features. Do not infer them from the product name or adapter-oriented design.
 
 ## Telegram groups and privacy mode
 
@@ -27,7 +27,7 @@ Telegram also delivers replies according to its privacy-mode routing rules.
 
 For mention-based interaction, either make each bot a group administrator, or
 disable privacy for each bot with BotFather `/setprivacy` and remove/re-add it to
-the group so that change takes effect. Switchboard selects known registered bots from mention/text-mention or addressed-command entities; absent an explicit known target, a reply to a known bot selects it. With no known target, approved bots receiving the update may all respond. Broad delivery therefore permits broadcast turns, not just passive context. Telegram commands are ordinary agent input, not native Switchboard configuration commands.
+the group so that change takes effect. Switchboard selects known registered bots from mention/text-mention or addressed-command entities; absent an explicit known target, a reply to a known bot selects it. With no known target, approved bots receiving the update may all respond. Broad delivery therefore permits broadcast turns, not just passive context. The five [native Telegram commands](setup.md#native-slash-commands) are the exception: they select one bot and do not trigger turns.
 Switchboard bridges its own confirmed
 bot replies through shared group/topic context without waking a peer agent. See the [Telegram Bots FAQ](https://core.telegram.org/bots/faq#what-messages-will-my-bot-get).
 
@@ -44,7 +44,7 @@ Use Node.js 24 or newer in the Switchboard repository:
 
 ```bash
 npm run build
-node --test test/server.test.mjs test/telegram-group-routing.test.mjs test/telegram-image.test.mjs test/discord.test.mjs test/discord-image.test.mjs test/output-images.test.mjs test/discord-server-access.test.mjs test/room-history.test.mjs test/ui.test.mjs
+node --test test/server.test.mjs test/telegram-group-routing.test.mjs test/telegram-commands.test.mjs test/telegram-image.test.mjs test/discord.test.mjs test/discord-image.test.mjs test/output-images.test.mjs test/discord-server-access.test.mjs test/room-history.test.mjs test/ui.test.mjs
 ```
 
 `build` is syntax checking for the server modules and Settings and Archive UI, not bundling or a live provider test. Service tests inject controlled fetch implementations, including activation; the Core smoke test configures a disabled connection without a token. Automated tests require no live Telegram/Discord credentials or provider calls. The image roundtrip test additionally provisions PostgreSQL 17 through Core’s isolated runner, executes the normal Core turn pipeline and durable receipt/artifact stores, and checks native vision plus controlled image generation, exact-run output ownership, durable attachment reads and serialized binary multipart replies through both transports. PostgreSQL 17 binaries are required; the release gate installs them before running the Core tests.
@@ -65,6 +65,7 @@ BURROW_CORE_ROOT="$(cd ../Burrow-Backend && pwd)" npm run test:core
 - `test/telegram-image.test.mjs`: controlled Telegram file retrieval, PNG bytes, caption routing, approval, isolation, security bounds, cancellation and frozen replay.
 - `test/discord-image.test.mjs`: anonymous bounded CDN downloads, MIME checks, admission/mentions, frozen replay, cancellation and ledger limits.
 - `test/output-images.test.mjs`: binary multipart API shape and bytes, image-only/text/multiple images, native Telegram GIF animation, routing, complete preflight failure, restart ambiguity, cancellation and partial-send suppression.
+- `test/telegram-commands.test.mjs`: native controls, exact bot/topic targeting, restart/replay, command menu and no command turns.
 - `test/telegram-group-routing.test.mjs`: group-root/topic inheritance, broadcast and explicit recipient selection.
 - `test/discord-server-access.test.mjs`: observed-server authorization, inherited routes, assignment and revocation.
 - `test/discord.test.mjs`: Discord identity, Gateway/REST, admissions and mapping, shared bounded context, duplicate and ambiguous-send handling using controlled dependencies (not live Discord).

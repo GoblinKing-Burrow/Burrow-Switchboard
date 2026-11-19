@@ -73,3 +73,54 @@ test('Telegram image bytes survive real Core capability validation, receipt acce
   assert.equal((await worker.publicState()).deliveries[0].turnId, 'turn-1');
 });
 
+
+test('Telegram /new changes the next turn to a fresh Core-owned session without replacing the old one', async t => {
+  const [{ createModCapabilities }, { createTelegramConnection }] = await Promise.all([
+    import(pathToFileURL(path.join(coreRoot, 'src/mod-capabilities.mjs'))), import('../server/telegram.mjs'),
+  ]);
+  const { createHash } = await import('node:crypto');
+  const store = await memoryStore(), sessions = new Map([['telegram:42:root', { marker: 'old conversation' }]]);
+  const submissions = [], replies = [];
+  const context = {
+    settings: store, secrets: { get: async () => 'fixture-token', has: async () => true },
+    agents: { list: async () => [{ id: 'hatchet', enabled: true }] },
+    logger: { error() {} },
+  };
+  const capabilities = createModCapabilities({
+    ownerModId: 'burrow-switchboard',
+    resolveAgentRuntime: async () => ({}),
+    stores: {
+      models: {}, scheduledJobs: {},
+      agents: { get: async id => id === 'hatchet' ? { id, enabled: true } : null },
+      conversations: {
+        getMetadata: async ({ sessionId }) => sessions.get(sessionId),
+        createEmpty: async ({ sessionId, operationId }) => { if (!sessions.has(sessionId)) sessions.set(sessionId, { creationOperationId: operationId }); },
+        updateMetadata: async ({ sessionId, update }) => { const metadata = update(sessions.get(sessionId)); sessions.set(sessionId, metadata); return metadata; },
+      },
+    },
+    externalTurnDispatcher: {
+      submit: async input => { submissions.push(input); return { turn: { id: `turn-${submissions.length}`, status: 'queued' } }; },
+    },
+  });
+  context.agents.sessions = { create: capabilities.createExternalSession, model: capabilities.readExternalSessionModel };
+  context.agents.turns = { submit: capabilities.submitExternalTurn, read: capabilities.readExternalTurn };
+  const worker = createTelegramConnection({ context, fetchImpl: async (url, init) => {
+    assert.ok(url.endsWith('/sendMessage'));
+    replies.push(JSON.parse(init.body));
+    return new Response(JSON.stringify({ ok: true, result: { message_id: 99 } }));
+  } });
+  t.after(() => worker.close());
+  await store.set('mappings', [{ id: createHash('sha256').update('telegram:42:root').digest('hex').slice(0, 24), chatId: '42', topicId: null, chatTitle: 'DM', chatType: 'direct', agentId: 'hatchet', enabled: true }]);
+  const send = (id, text, entities) => worker.processMessage({ update_id: id, message: { message_id: id, chat: { id: 42, type: 'private' }, from: { id: 42 }, text, entities } }, { id: '9' });
+  await send(1, 'Before reset');
+  await send(2, '/new', [{ type: 'bot_command', offset: 0, length: 4 }]);
+  await send(3, '/model', [{ type: 'bot_command', offset: 0, length: 6 }]);
+  await send(4, 'After reset');
+  assert.equal(sessions.get('telegram:42:root').marker, 'old conversation');
+  assert.equal(submissions.length, 2, 'commands never reach Core turn submission');
+  assert.equal(submissions[0].sessionId, 'telegram:42:root');
+  assert.match(submissions[1].sessionId, /^mod:[a-f0-9]{64}$/);
+  assert.equal(sessions.get(submissions[1].sessionId).externalModOwnerId, 'burrow-switchboard');
+  assert.match(replies[0].text, /fresh session/);
+  assert.match(replies[1].text, /agent default/);
+});

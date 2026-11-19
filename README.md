@@ -16,9 +16,9 @@ Burrow Switchboard connects approved external chats to real Burrow agent session
 - Approved group/topic or guild/channel context is durable, bounded and shared across approved bots; bot-authored messages never automatically wake an agent
 - Core executes ordinary agent turns with normal SOUL, tools, continuity and session serialization; answers return asynchronously
 - Delivery records and duplicate suppression are bounded; ambiguous outbound sends are not blindly resent
-- Native Discord `/help`, `/status`, `/stop`, `/new` and `/model`; see [command prerequisites](docs/discord.md#native-slash-commands)
+- Native `/help`, `/status`, `/stop`, `/new` and `/model` on [Telegram](docs/setup.md#native-slash-commands) and [Discord](docs/discord.md#native-slash-commands)
 - Telegram photos and PNG/JPEG/GIF/WebP image documents (up to 20 MiB) can be sent with a caption or on their own to a compatible, image-capable Core/model
-- Discord PNG/JPEG/GIF/WebP attachments (up to four / 20 MiB aggregate) accept captions or image-only input; both transports upload Core output images as binary files. Voice and streaming are not supported; Telegram has no native command handler
+- Discord PNG/JPEG/GIF/WebP attachments (up to four / 20 MiB aggregate) accept captions or image-only input; both transports upload Core output images as binary files. Voice and streaming are not supported.
 
 ## Setup
 

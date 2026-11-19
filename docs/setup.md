@@ -43,7 +43,7 @@ Starting a private conversation with each bot is useful for a direct-message tes
 
 ### Commands, mentions and replies
 
-Recipient selection recognizes Telegram `mention`, `text_mention` and addressed `bot_command` entities for connected bots. A reply targets a known connected bot only when no explicit bot target is present. Caption entities follow the same rules. A matching username mention is stripped from the selected bot's display text; empty remaining text is ignored for text-only messages, while an image without a caption remains a turn. Telegram commands are routed as text, not executed as Switchboard configuration operations. Native slash-command controls currently exist on Discord only.
+Recipient selection recognizes Telegram `mention`, `text_mention` and addressed `bot_command` entities for connected bots. A reply targets a known connected bot only when no explicit bot target is present. Caption entities follow the same rules. A matching username mention is stripped from the selected bot's display text; empty remaining text is ignored for text-only messages, while an image without a caption remains a turn. Supported native commands are handled before ordinary message routing; other commands still follow ordinary routing.
 
 With privacy enabled, Telegram may deliver a group message to only one bot, and reply delivery may take precedence over an addressed command. Configure broad delivery for each participating bot before testing broadcast semantics. See [Telegram delivery rules](https://core.telegram.org/bots/faq#what-messages-will-my-bot-get).
 
@@ -52,6 +52,20 @@ With privacy enabled, Telegram may deliver a group message to only one bot, and 
 Switchboard bridges its own confirmed bot replies into shared group/topic context, without waking a peer agent. Test connectivity using a human account. This release does not change Telegram's bot-to-bot delivery behavior.
 
 Telegram group instructions were rechecked **2026-10-25** against official documentation and Switchboard `d1388ca8c65e250411034de7560de59d3ffdc875` (**2026.10.24.3**). This checks documented delivery rules and source behavior, not live credentials or end-to-end delivery.
+
+## Native slash commands
+
+Use these commands in an approved Telegram DM, or in a group/topic as `/new@YourBotUsername` (same pattern for the other commands). Replying to a message from the intended bot also works. Bare group commands that don't target a bot are ignored; they never reset every bot in the room. Group owners and administrators can use `/new`, `/stop`, and model changes; approved DM participants can use all five commands. Group command replies are visible in that chat/topic.
+
+- `/help` — show the available commands.
+- `/status` — show the mapped agent, current session and pending deliveries.
+- `/stop` — request cancellation of pending turns in this bot's current session. It cannot undo completed work.
+- `/new` — switch this bot and chat/topic to a fresh Burrow session. Prior history stays in Burrow; late replies and pre-reset room context aren't injected into the new conversation.
+- `/model` — show the session's model selection. `/model list` lists available choices; `/model <connectionId>:<model>` picks one. If the chat still uses its legacy session, run `/new` before selecting a model.
+
+Native controls require a leading text `bot_command` entity from Telegram; slash-looking prose, quoted commands and image captions are not command execution. `/new` changes the route and suppresses old replies, but does not cancel previous Core work. Use `/stop` in the current session before `/new` when cancellation is wanted; cancellation cannot undo completed effects.
+
+Switchboard adds these commands to the bot's default Telegram menu without removing unrelated entries. A registration failure doesn't block polling or manually typed commands. `/start` still follows the existing admission flow and is not a reset. The five native commands never start an agent turn. See [Core capabilities](architecture.md#additional-command-capabilities) for compatibility.
 
 ## Send an image
 
