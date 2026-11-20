@@ -65,7 +65,7 @@ Use these commands in an approved Telegram DM, or in a group/topic as `/new@Your
 
 Native controls require a leading text `bot_command` entity from Telegram; slash-looking prose, quoted commands and image captions are not command execution. `/new` changes the route and suppresses old replies, but does not cancel previous Core work. Use `/stop` in the current session before `/new` when cancellation is wanted; cancellation cannot undo completed effects.
 
-Switchboard adds these commands to the bot's default Telegram menu without removing unrelated entries. A registration failure doesn't block polling or manually typed commands. `/start` still follows the existing admission flow and is not a reset. The five native commands never start an agent turn. See [Core capabilities](architecture.md#additional-command-capabilities) for compatibility.
+Switchboard adds these commands to the bot's default Telegram menu without removing unrelated entries. A registration failure doesn't block polling or manually typed commands. Registration retries within the same polling generation with exponential backoff capped at 60 seconds, rather than waiting for a restart. `/start` still follows the existing admission flow and is not a reset. The five native commands never start an agent turn. See [Core capabilities](architecture.md#additional-command-capabilities) for compatibility.
 
 ## Send an image
 

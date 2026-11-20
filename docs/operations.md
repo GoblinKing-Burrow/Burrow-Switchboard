@@ -24,6 +24,12 @@ Disabling polling/the gateway pauses both ingestion and reconciliation. Clearing
 
 State survives through host settings/secrets, but collections are bounded. The per-connection 200-record combined delivery limit can remove old Telegram records, including accepted work still pending under enough traffic; frozen uncertain submissions are protected from eviction. If every record is protected, Telegram reports `telegram_backlog_full` and stops ingesting until space is available. Discord protects unresolved and unknown deliveries from eviction and reports `discord_backlog_full` when no completed non-unknown record can be removed; a 32,000,000-byte delivery-state ceiling also applies. Do not treat this initial implementation as an unbounded durable outbox or unlimited audit trail.
 
+## Shutdown and interrupted transport
+
+Shutdown rejects new and queued management operations with `service_shutdown`, signals existing workers before draining their queues, and cancels pending bot identity checks. Transport waits observe cancellation/deadlines even when an adapter ignores its signal, so a stuck send does not keep the local shutdown waiter blocked. Repeated close requests share the same shutdown operation.
+
+This releases the local wait; it does not retract a message already accepted by Telegram or Discord. An uncertain write-ahead `sending` record remains available for reconciliation and becomes `unknown` rather than being blindly resent. Inspect the destination before repeating work.
+
 ## Group, channel and thread quick checks
 
 For Telegram, check delivery/privacy, then the bot's assigned goblin and root-group approval under **Pending admissions** and approved access in **Chat mappings**. No known bot target means ordinary group speech broadcasts to participating bots; mentions/replies select known bots. Topics inherit group access, not history. Discord inherited access requires one server grant and a default agent, with Discord channel/thread permissions still applying. Explicit room overrides can independently block or grant access. See [routing](routing.md).
