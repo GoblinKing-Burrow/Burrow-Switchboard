@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "releaseDate": "2026.11.21",
+  "releaseDate": "2026.11.22",
   "sources": {
-    "burrow": "eecbf6f91f625029a7a66d6518a24a3ca627502b",
-    "burrowBackend": "c0e08ada700be88a8cdf71f7959c81b22b3a7b42",
-    "burrowUi": "bf1f6f0ea95a9209b70562c6abb0c02785e5da6e",
+    "burrow": "3d4e6eedb2167279f5799f5c334456c47ddfcc9b",
+    "burrowBackend": "66c72c880dcbe099791b7b6ac308654a46f160e6",
+    "burrowUi": "58fefb64b4b60ee798808b34c546233b24e68742",
     "nodeGoblin": "d19d583b97359ee3983b8f98f803a5798dc13a39",
     "goblinSecretStore": "c36767d5b05d6b532901712c39b34e587d81295a",
     "burrowSkills": "4db878b2b736575ccc60bc1eb96ff0511f430232",
@@ -13,5 +13,5 @@
     "burrowTheater": "81a55a78c7e3f35174e53dae6eab78fd5bbaeedc",
     "burrowSwitchboard": "5c4cc5f308053008405eb5260e3704f4db560486"
   },
-  "promotionRunId": "44909915399"
+  "promotionRunId": "45027955712"
 }
