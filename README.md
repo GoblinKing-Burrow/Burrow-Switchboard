@@ -43,3 +43,7 @@ Switchboard is distributed under the [Burrow Sustainable Use License](LICENSE).
 ## Documentation
 
 Start with the [Switchboard guide](docs/index.md) for operator setup, admission and routing, Settings, delivery troubleshooting, architecture, the mod-local API and development checks. These pages describe the implemented Telegram and Discord text/image transports and their distinct delivery boundaries.
+
+## Identity deletion cleanup
+
+This version requires Core2026.11.26.2 or later. Update Core before the mod. The mod consumes Core's durable identity-deletion lifecycle, removes exact deleted-identity operational references in its own store, and reconciles pre-existing missing identities. Disabled/hidden identities are retained. Shared credentials, connected accounts, and other identities' records are not deleted merely because one goblin is removed. Cleanup failures stay pending and retryable in Core's deletion receipts (`GET /api/agents/deletions`); this release does not install or restart live Core.

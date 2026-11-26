@@ -622,9 +622,11 @@ if (!process.env.BURROW_TRACE_ISOLATION || !process.env.BURROW_POSTGRES_TEST_URL
       const runtime = await ensureAgentRoots({ runtimeState: { workspaceRoot: path.join(root, 'workspace') }, agent });
       const resolveAgentRuntime = async id => { assert.equal(id, agent.id); return runtime; };
       let generations = 0, jobId, artifactId;
+      // Declare the image endpoint for Core's media contract; the fixture adapter below never calls it.
+      const baseUrl = 'https://forge-fixture.test/v1/images/generations';
       forge = await new PostgresForgeStore({ pool, runtimeRoot: root, resolveAgent: resolveAgentRuntime,
-        connections: [{ id: 'fixture', apiType: 'openai-responses', models: [{ id: 'image', acceptedOutput: ['image'] }] }],
-        resolveConfig: async () => ({ api: 'openai-responses', capabilities: { outputs: ['image'] } }),
+        connections: [{ id: 'fixture', apiType: 'openai-responses', baseUrl, models: [{ id: 'image', acceptedOutput: ['image'] }] }],
+        resolveConfig: async () => ({ api: 'openai-responses', baseUrl, capabilities: { outputs: ['image'] } }),
         adapterFactory: () => ({ complete: async () => {
           generations++;
           return { ok: true, outputArtifacts: [{ kind: 'image', name: 'animated.gif', mimeType: 'image/gif', source: { bytes: ANIMATED_GIF } }] };

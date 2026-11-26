@@ -836,6 +836,17 @@ export function createDiscordConnection(options = {}) {
     await interruptRoute(route, 'mapping_deleted');
     await put('mappings', routes.filter(item => item.id !== id)); await put('pending-admissions', (await pending()).filter(item => item.id !== id)); return publicState();
   }
+  async function deleteAgentReferences(agentId) {
+    const routes = await mappings();
+    for (const route of routes.filter(item => item.agentId === agentId)) {
+      blocked.add(route.id); imageAborts.get(route.id)?.abort();
+      await deleteMapping(route.id);
+      blocked.delete(route.id);
+    }
+    const configuration = await config();
+    if (configuration.agentId === agentId) await configure({ enabled: configuration.enabled === true, agentId: null });
+    return publicState();
+  }
   function start() { if (!closed && !started) { started = true; launch(); } return Promise.resolve(); }
   function stop() { if (!closed) { closed = true; invalidate(); } }
   async function close() { stop(); await queue; await state({ health: 'stopped', polling: 'stopped', gateway: 'stopped' }); }
@@ -869,6 +880,7 @@ export function createDiscordConnection(options = {}) {
       return serialize(() => updateMapping(id, value)).finally(() => blocked.delete(id));
     },
     deleteMapping: id => { blocked.add(id); imageAborts.get(id)?.abort(); return serialize(() => deleteMapping(id)); },
+    deleteAgentReferences: agentId => change(() => deleteAgentReferences(agentId)),
     processInteraction: (event, bot, api = currentApi) => processInteraction(event, bot, api, generation),
     processMessage: (event, bot) => { const gen = generation; return serialize(() => processMessage(event, bot, gen)); },
     reconcile: api => { const gen = generation; return serialize(() => reconcile(api, gen)); },

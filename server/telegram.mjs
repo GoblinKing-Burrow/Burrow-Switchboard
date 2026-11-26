@@ -713,10 +713,17 @@ export function createTelegramConnection({ context, connectionId = 'default', fe
     await write('mappings', approved.filter(item => item.id !== id));
     return publicState();
   }
+  async function deleteAgentReferences(agentId) {
+    const approved = await mappings();
+    for (const route of approved.filter(item => item.agentId === agentId)) await deleteMapping(route.id);
+    const config = await configuration();
+    if (config.agentId === agentId) await configure({ enabled: config.enabled === true, agentId: null });
+    return publicState();
+  }
   function start() { if (!loopPromise) loopPromise = poll().catch(error => context.logger.error('Switchboard poller failed', publicError(error))); return loopPromise; }
   function stop() { if (!controller.signal.aborted) { pollGeneration += 1; controller.abort(new Error('service_shutdown')); wake(); } }
   async function close() { stop(); await loopPromise; await queue; }
-  return Object.freeze({ start, stop, close, publicState, configure: input => change(() => configure(input)), clearToken: () => change(clearToken), approve: (id, input) => serialize(() => approve(id, input)), deny: id => serialize(() => deny(id)), updateMapping: (id, input) => change(() => updateMapping(id, input)), deleteMapping: id => change(() => deleteMapping(id)), processMessage: (update, bot) => serialize(() => runMessage(update, bot)), reconcile: api => serialize(() => reconcile(api)) });
+  return Object.freeze({ start, stop, close, publicState, configure: input => change(() => configure(input)), clearToken: () => change(clearToken), approve: (id, input) => serialize(() => approve(id, input)), deny: id => serialize(() => deny(id)), updateMapping: (id, input) => change(() => updateMapping(id, input)), deleteMapping: id => change(() => deleteMapping(id)), deleteAgentReferences: agentId => change(() => deleteAgentReferences(agentId)), processMessage: (update, bot) => serialize(() => runMessage(update, bot)), reconcile: api => serialize(() => reconcile(api)) });
 }
 
 export { createSwitchboardService } from './connections.mjs';

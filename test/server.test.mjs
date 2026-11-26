@@ -8,15 +8,16 @@ const telegramRouteId = (chatId, topicId = null) => createHash('sha256').update(
 const settle = () => new Promise(resolve => setImmediate(resolve));
 function fixture({ fetchImpl = async () => { throw new Error('network_forbidden'); }, turnResult = { id: 'turn-1', status: 'queued', result: null } } = {}) {
   const settings = new Map(); const secrets = new Map(); const routes = new Map(); const submissions = []; const sent = [];
+  let deletionHandler;
   const context = {
     id: 'burrow-switchboard',
     api: Object.fromEntries(['get','post','put','patch','delete'].map(method => [method, (path, handler) => routes.set(`${method.toUpperCase()} ${path}`, handler)])),
     settings: { get: async (name, fallback = null) => settings.has(name) ? structuredClone(settings.get(name)) : fallback, set: async (name, value) => (settings.set(name, structuredClone(value)), value), delete: async name => settings.delete(name) },
     secrets: { get: async name => secrets.get(name) ?? null, set: async (name, value) => (secrets.set(name, value), true), clear: async name => secrets.delete(name), has: async name => secrets.has(name) },
-    agents: { list: async () => [{ id: 'hatchet', name: 'Hatchet', enabled: true }], turns: { submit: async input => (submissions.push(input), { turn: structuredClone(turnResult), replayed: false }), read: async () => structuredClone(turnResult) } },
+    agents: { onDeleted(handler) { deletionHandler = handler; }, list: async () => [{ id: 'hatchet', name: 'Hatchet', enabled: true }], turns: { submit: async input => (submissions.push(input), { turn: structuredClone(turnResult), replayed: false }), read: async () => structuredClone(turnResult) } },
     logger: { info() {}, error() {} },
   };
-  return { context, routes, settings, secrets, submissions, sent, fetchImpl };
+  return { context, routes, settings, secrets, submissions, sent, fetchImpl, get deletionHandler() { return deletionHandler; } };
 }
 const request = (body = null, params = {}) => ({ auth: { enabled: false, authenticated: false }, body, params, query: {}, headers: {} });
 
@@ -41,6 +42,58 @@ test('unknown chat becomes pending, approval validates agent, direct routing sub
   await service.processMessage(update, { id: '1', username: 'switchboard_bot' });
   assert.equal(f.submissions.length, 1); assert.equal(f.submissions[0].idempotencyKey, 'telegram-update-77'); assert.equal(f.submissions[0].sessionId, 'telegram:42:root'); assert.match(f.submissions[0].message, /Rob \(@king\)/); assert.match(f.submissions[0].message, /hello goblin/);
   state = await service.publicState(); assert.equal(state.deliveries[0].turnId, 'turn-1'); await service.close();
+});
+
+test('deleted-agent cleanup removes exact Switchboard targets and routes, interrupts pending work, and retains credentials/history', async () => {
+  const f = fixture();
+  f.secrets.set('telegram-bot-token', 'keep-this-credential');
+  f.settings.set('configuration', { enabled: false, agentId: 'deleted-agent' });
+  f.settings.set('mappings', [{ id: telegramRouteId('42'), chatId: '42', topicId: null, chatType: 'direct', agentId: 'deleted-agent', enabled: true },
+    { id: 'other', chatId: '43', topicId: null, chatType: 'direct', agentId: 'hatchet', enabled: true }]);
+  f.settings.set('pending-admissions', [{ id: telegramRouteId('42'), chatId: '42' }, { id: 'other-pending' }]);
+  const prior = { id: 'in:old', direction: 'inbound', chatId: '42', topicId: null, agentId: 'deleted-agent', submission: { agentId: 'deleted-agent', message: 'frozen' }, status: 'processing' };
+  const delivered = { id: 'out:done', direction: 'outbound', chatId: '42', agentId: 'deleted-agent', status: 'delivered' };
+  f.settings.set('deliveries', [prior, delivered]);
+  const service = createSwitchboardService({ context: f.context, fetchImpl: f.fetchImpl });
+  await service.deleteAgentReferences('deleted-agent');
+  await service.deleteAgentReferences('deleted-agent');
+  const state = await service.publicState();
+  assert.equal(state.agentId, null);
+  assert.deepEqual(state.mappings.map(item => item.id), ['other']);
+  assert.deepEqual(state.pending, [{ id: 'other-pending' }]);
+  assert.equal(state.deliveries.find(item => item.id === prior.id).status, 'interrupted');
+  assert.equal(f.settings.get('deliveries').find(item => item.id === prior.id).submission, null);
+  assert.deepEqual(Object.fromEntries(Object.entries(state.deliveries.find(item => item.id === delivered.id)).filter(([key]) => key !== 'agentName')), delivered);
+  assert.equal(f.secrets.get('telegram-bot-token'), 'keep-this-credential');
+  await service.close();
+});
+
+test('Core deletion callback is registered during activation and can replay safely', async t => {
+  const f = fixture();
+  f.settings.set('configuration', { enabled: false, agentId: 'deleted-agent' });
+  f.settings.set('mappings', [{ id: telegramRouteId('42'), chatId: '42', topicId: null, chatType: 'direct', agentId: 'deleted-agent', enabled: true }]);
+  const cleanup = await activate(f.context, { fetchImpl: f.fetchImpl }); t.after(cleanup);
+  assert.equal(typeof f.deletionHandler, 'function');
+  const event = { eventId: 'deleted-event', agentId: 'deleted-agent', ownerModId: null, deletedAt: '2026-11-25T00:00:00.000Z' };
+  await f.deletionHandler(event); await f.deletionHandler(event);
+  assert.equal(f.settings.get('configuration').agentId, null);
+  assert.deepEqual(f.settings.get('mappings'), []);
+});
+
+test('startup prunes only confirmed missing agents and retains disabled assignments', async () => {
+  const f = fixture();
+  f.context.agents.list = async () => [{ id: 'hatchet', enabled: true }, { id: 'paused', enabled: false }];
+  f.settings.set('configuration', { enabled: false, agentId: 'gone' });
+  f.settings.set('mappings', [
+    { id: telegramRouteId('42'), chatId: '42', topicId: null, chatType: 'direct', agentId: 'gone', enabled: true },
+    { id: telegramRouteId('43'), chatId: '43', topicId: null, chatType: 'direct', agentId: 'paused', enabled: false },
+  ]);
+  const service = createSwitchboardService({ context: f.context, fetchImpl: f.fetchImpl });
+  await service.start();
+  const state = await service.publicState();
+  assert.equal(state.agentId, null);
+  assert.deepEqual(state.mappings.map(route => route.agentId), ['paused']);
+  await service.close();
 });
 
 test('approved groups route ordinary human speech, bot mentions and replies without losing exact mention matching', async () => {

@@ -130,6 +130,22 @@ export function createSwitchboardService(options = {}) {
     const coreAgentTurns = connections[0]?.coreAgentTurns || (context.agents?.turns?.submit && context.agents?.turns?.read ? { available: true } : { available: false, reason: 'core_external_agent_turns_unavailable' });
     return { ...(legacy || { enabled: false, tokenConfigured: false, bot: { configured: false }, transport: { enabled: false, health: 'stopped', polling: 'stopped' }, mappings: [], pending: [], deliveries: [] }), coreAgentTurns, connections };
   }
+  async function deleteAgentReferences(agentId) {
+    const list = await registry();
+    for (const item of list) await worker(item.id).deleteAgentReferences(agentId);
+    return publicState();
+  }
+  async function pruneMissingAgents() {
+    const agents = await context.agents.list({includeHidden:true});
+    if (!Array.isArray(agents) || agents.some(agent => !agent || typeof agent.id !== 'string')) fail('agent_directory_unavailable', 503);
+    const present = new Set(agents.map(agent => agent.id));
+    const list = await registry();
+    for (const item of list) {
+      const service = worker(item.id), state = await service.publicState();
+      const referenced = new Set([state.agentId, ...(state.mappings || []).map(route => route.agentId)].filter(id => typeof id === 'string'));
+      for (const id of referenced) if (!present.has(id)) await service.deleteAgentReferences(id);
+    }
+  }
   async function markArchiveFailure() {
     archiveError = true;
     archiveRetry = true;
@@ -266,6 +282,7 @@ export function createSwitchboardService(options = {}) {
   function start() {
     return serialize(async () => {
       try { await archiveState(); } catch { await markArchiveFailure(); }
+      try { await pruneMissingAgents(); } catch (error) { context.logger?.error?.('switchboard_agent_reconciliation_failed', { code: error?.message || 'agent_directory_unavailable' }); }
       started = true;
       for (const item of await registry()) {
         if (controller.signal.aborted) return;
@@ -296,6 +313,7 @@ export function createSwitchboardService(options = {}) {
     denyConnection: (id, routeId) => action(id, 'deny', [routeId]),
     updateConnectionMapping: (id, routeId, input) => action(id, 'updateMapping', [routeId, input]),
     deleteConnectionMapping: (id, routeId) => action(id, 'deleteMapping', [routeId]),
+    deleteAgentReferences: agentId => serialize(() => deleteAgentReferences(agentId)),
     configure: input => serialize(() => configure('default', input)),
     clearToken: () => serialize(() => clearToken('default')),
     approve: (id, input) => action('default', 'approve', [id, input]),

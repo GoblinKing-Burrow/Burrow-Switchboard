@@ -17,6 +17,13 @@ function route(handler) {
 
 export async function activate(context, options = {}) {
   const service = createSwitchboardService({ ...options, context });
+  if (typeof context.agents?.onDeleted === 'function') context.agents.onDeleted(async event => {
+    if (!event || typeof event.eventId !== 'string' || typeof event.agentId !== 'string' ||
+        !(event.ownerModId === null || typeof event.ownerModId === 'string') || typeof event.deletedAt !== 'string') {
+      throw Object.assign(new Error('agent_deletion_event_invalid'), { statusCode: 503 });
+    }
+    await service.deleteAgentReferences(event.agentId);
+  });
   context.api.get('/archive', route(() => service.archiveState()));
   context.api.get('/bootstrap', route(() => service.publicState()));
   context.api.get('/configuration', route(() => service.publicState()));
